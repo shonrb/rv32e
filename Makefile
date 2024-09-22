@@ -1,7 +1,7 @@
 VSRC   = $(wildcard Design/*.sv)
 CSRC   = Simulation/Main.cpp
 CLIB   = $(wildcard Simulation/*.hpp)
-VFLAGS = -Wall --cc --exe --build --Mdir Build
+VFLAGS = --cc --exe --build --Mdir Build --top-module Top
 CFLAGS = --std=c++20 
 BIN    = sim
 
