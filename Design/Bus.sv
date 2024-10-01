@@ -1,4 +1,3 @@
-
 typedef enum logic [1:0] {
     IDLE   = 'b00,
     BUSY   = 'b01,
@@ -35,113 +34,178 @@ typedef enum logic {
     RESP_ERROR = 1
 } transfer_response;
 
-typedef struct packed {
-    logic [31:0] addr;
-    logic write;
+interface bus_slv_in;
+    wire write;
+    wire [31:0] addr;
     transfer_size size;
     transfer_burst burst;
     transfer_protection prot;
     transfer_kind trans;
     logic mastlock;
     logic ready;
-    logic [31:0] wdata;
-} bus_slv_in;
+    wire [31:0] wdata;
+endinterface
 
-typedef struct packed {
+interface bus_slv_out;
     logic [31:0] rdata;
     logic ready;
     transfer_response resp;
-} bus_slv_out;
+endinterface
+
+interface bus_master;
+    logic start;
+    logic write;
+    logic [31:0] address;
+    logic [31:0] write_data;
+    logic [31:0] read_data;
+    transfer_response response;
+    logic ready;
+
+    modport in(
+        input start, write, address, write_data,
+        output read_data, response, ready
+    );
+
+    modport out(
+        output start, write, address, write_data,
+        input read_data, response, ready
+    );
+endinterface
+
+module BusMux (
+    input bus_slv_out out[AHB_SLAVE_COUNT],
+    input logic [31:0] mux,
+    output logic [31:0] rdata,
+    output logic ready,
+    output transfer_response resp
+);
+    logic [31:0] out_rdata[AHB_SLAVE_COUNT];
+    logic out_ready[AHB_SLAVE_COUNT];
+    transfer_response out_resp[AHB_SLAVE_COUNT];
+
+    assign rdata = out_rdata[mux];
+    assign ready = out_ready[mux];
+    assign resp  = out_resp[mux];
+
+    generate 
+        genvar i;
+        for (i = 0; i < AHB_SLAVE_COUNT; ++i) begin
+            assign out_rdata[i] = out[i].rdata;
+            assign out_ready[i] = out[i].ready;
+            assign out_resp[i]  = out[i].resp;
+        end
+    endgenerate
+endmodule
 
 module BusControl (
     input clk,
     input rst,
     // Front facing
-    input logic start,
-    input logic write,
-    input logic [31:0] addr,
-    input logic [31:0] write_data,
-    output logic [31:0] read_data,
-    output transfer_response response,
-    output logic ready,
+    bus_master.in bus,
     // Slaves
     output logic [AHB_SLAVE_COUNT-1:0] sel,
     output bus_slv_in slv_in,
     input bus_slv_out slv_out[AHB_SLAVE_COUNT]
 );
-    logic[31:0] index;
-    bus_slv_out mux_out;
+    logic [31:0] mux;
+    BusMux bus_mux (
+        .out(slv_out),
+        .mux(mux),
+        .rdata(bus.read_data),
+        .ready(bus.ready),
+        .resp(bus.response)
+    );
 
-    // TODO: Locked transfers, Sized transfers, bursts(?), protection(?)
-    assign mux_out         = slv_out[index];
-    assign ready           = mux_out.ready;
-    assign response        = mux_out.resp;
-    assign slv_in.addr     = addr;
-    assign slv_in.write    = write;
+    // TODO: Locked transfers, Sized transfers, bursts(?), protection(??)
+    assign slv_in.addr     = bus.address;
+    assign slv_in.write    = bus.write;
     assign slv_in.size     = HSIZE_32;
     assign slv_in.burst    = SINGLE;
     assign slv_in.prot     = '{0, 0, 1, 1};
     assign slv_in.mastlock = 0;
-    assign slv_in.wdata    = write_data;
+    assign slv_in.wdata    = bus.write_data;
 
     // Ensure memory map is ordered
     generate 
-        localparam prev = 0;
+        localparam [31:0] prev = 0;
         for (genvar i = 0; i < AHB_SLAVE_COUNT-1; i++) begin
-            localparam bnd = AHB_ADDR_MAP[i];
-            assert property (prev <= bnd);
+            localparam [31:0] bnd = AHB_ADDR_MAP[i];
+            if (prev > bnd)
+                $error("Bad");
             assign prev = bnd;
         end
     endgenerate
 
-    always @(negedge rst) begin
-        slv_in.trans <= IDLE;
-        slv_in.ready <= 1;
-        index <= 0;
-        sel <= 1;
-    end 
-
-    always @(posedge clk) begin
-        // Transfer states
-        if (mux_out.ready) begin
-            case (slv_in.trans)
-            IDLE: begin
-                if (start)
-                    slv_in.trans <= NONSEQ;
+    always @(posedge clk or negedge rst) begin
+        if (!rst) begin
+            slv_in.trans <= IDLE;
+            slv_in.ready <= 1;
+            sel <= 1;
+        end else begin
+            // Transfer states
+            if (bus.ready) begin
+                case (slv_in.trans)
+                IDLE: begin
+                    if (bus.start)
+                        slv_in.trans <= NONSEQ;
+                end
+                BUSY: begin end
+                NONSEQ: begin 
+                    if (!bus.start)
+                        slv_in.trans <= IDLE;
+                end
+                SEQ: begin end
+                endcase
             end
-            BUSY: begin end
-            NONSEQ: begin 
-            if (!start)
-                slv_in.trans <= IDLE;
-            end
-            SEQ: begin end
-            endcase
-        end
 
-        // Address Decoding
-        for (int i = 0; i < AHB_SLAVE_COUNT; i++) begin
-            automatic int from 
-                = (i == 0)              
-                ? 32'b0       
-                : 32'(AHB_ADDR_MAP[i-1]);
-            automatic int to   
-                = (i == AHB_SLAVE_COUNT-1) 
-                ? 32'b1 << 32 
-                : 32'(AHB_ADDR_MAP[i]);
-            if (addr >= from && addr < to) begin
-                sel <= 1 << i;
-                index <= i;
+            // Address Decoding
+            for (int i = 0; i < AHB_SLAVE_COUNT; i++) begin
+                automatic int from 
+                    = (i == 0)              
+                    ? 32'b0       
+                    : 32'(AHB_ADDR_MAP[i-1]);
+                automatic int to   
+                    = (i == AHB_SLAVE_COUNT-1) 
+                    ? 32'b1 << 32 
+                    : 32'(AHB_ADDR_MAP[i]);
+                if (bus.address >= from && bus.address < to) begin
+                    sel <= 1 << i;
+                    mux <= i;
+                end
             end
         end
     end
 endmodule
 
 module BusNoSlave (
-    input sel,
+    input logic clk,
+    input logic rst,
+    input logic sel,
     input bus_slv_in in,
     output bus_slv_out out
 );
     assign out.resp = RESP_ERROR;
     assign out.ready = 1;
+endmodule
+
+module BusBRAM #(parameter SIZE) (
+    input logic clk,
+    input logic rst,
+    input logic sel,
+    input bus_slv_in in,
+    output bus_slv_out out
+);
+    logic [31:0] mem[SIZE]; 
+    
+    always @(posedge clk) begin
+        if (sel && in.ready && in.trans == NONSEQ) begin
+            if (in.write)
+                mem[in.addr] <= in.wdata;
+            else
+                out.rdata <= mem[in.addr];
+            out.ready <= 1;
+        end
+    end
+   
 endmodule
 
