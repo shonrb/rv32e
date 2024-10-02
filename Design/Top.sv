@@ -67,6 +67,7 @@ module Top (
 
     always @(posedge clock) begin
         $display("Test");
+        $display("from top: %d", ext_1_rdata);
     end
 endmodule
 

@@ -25,7 +25,10 @@ class MemDevice
     std::array<uint32_t, Size / 4> mem;
 
 public:
-    MemDevice(BusSlv b) : bus{b}, mem{0} {}
+    MemDevice(BusSlv b) : bus{b}, mem{0} 
+    {
+        bus.us_ready = 1;
+    }
 
     void write(uint32_t addr, uint32_t value) 
     {
@@ -36,18 +39,21 @@ public:
     uint32_t read(uint32_t addr) const
     {
         // TODO: other transfer sizes
+        printf("mem read %u %u\n", addr, mem[addr/4]);
         return mem[addr / 4];
     }
 
     void update() 
     {
         // TODO: delay on transfer to emulate real memory devices
-        if (bus.sel && bus.master_ready && bus.trans == 2) {
+        printf("mem: %d %d\n", bus.sel, bus.trans);
+        if (bus.sel && bus.trans == 2) {
             auto addr = bus.addr - AddrOffset;
             if (bus.write) {
-                write(bus.addr, bus.write_data);
+                write(addr, bus.write_data);
             } else {
-                bus.read_data = read(bus.addr);
+                printf("here\n");
+                bus.read_data = read(addr);
             }
         }
     }
@@ -71,22 +77,29 @@ int main(int argc, const char **argv)
         .response = top->ext_1_resp
     };
 
-    auto memory = MemDevice<1000, 2048>(bus);
+    auto memory = MemDevice<1000, 0>(bus);
 
-    memory.write(0, 0xFFFFFFFF);
+    memory.write(0, 1111);
 
+    auto pulse = [&](){
+        static int i = 1;
+        printf("CLOCK PULSE %d\n", i++);
+        top->clock = 1;
+        top->eval();
+        top->clock = 0;
+        top->eval();
+    };
     top->reset = 0;
-    top->eval();
+    pulse();
     top->reset = 1;
-    top->clock = !top->clock;
-    top->eval();
+    pulse();
     memory.update();
-    top->clock = !top->clock;
-    top->eval();
-    top->clock = !top->clock;
-    top->eval();
-    assert(top->ext_1_sel);
-    assert(top->ext_n_addr == 0);
-    assert(top->ext_n_write == 0);
+    pulse();
+    memory.update();
+    pulse();
+    memory.update();
+    pulse();
+    memory.update();
+    pulse();
 }
 

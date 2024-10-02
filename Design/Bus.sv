@@ -57,16 +57,16 @@ interface bus_master;
     logic write;
     logic [31:0] address;
     logic [31:0] write_data;
-    logic [31:0] read_data;
+    wire [31:0] read_data;
     transfer_response response;
     logic ready;
 
-    modport in(
+    modport in (
         input start, write, address, write_data,
         output read_data, response, ready
     );
 
-    modport out(
+    modport out (
         output start, write, address, write_data,
         input read_data, response, ready
     );
@@ -117,6 +117,7 @@ module BusControl (
     );
 
     // TODO: Locked transfers, Sized transfers, bursts(?), protection(??)
+    assign slv_in.ready    = bus.ready;
     assign slv_in.addr     = bus.address;
     assign slv_in.write    = bus.write;
     assign slv_in.size     = HSIZE_32;
@@ -139,20 +140,21 @@ module BusControl (
     always @(posedge clk or negedge rst) begin
         if (!rst) begin
             slv_in.trans <= IDLE;
-            slv_in.ready <= 1;
             sel <= 1;
         end else begin
             // Transfer states
             if (bus.ready) begin
                 case (slv_in.trans)
                 IDLE: begin
-                    if (bus.start)
+                    if (bus.start) begin
                         slv_in.trans <= NONSEQ;
+                    end 
                 end
                 BUSY: begin end
                 NONSEQ: begin 
-                    if (!bus.start)
+                    if (!bus.start) begin
                         slv_in.trans <= IDLE;
+                    end
                 end
                 SEQ: begin end
                 endcase
@@ -173,6 +175,7 @@ module BusControl (
                     mux <= i;
                 end
             end
+            $display("from mst: %d, %d", bus.read_data, slv_out[0].rdata);
         end
     end
 endmodule
@@ -186,26 +189,5 @@ module BusNoSlave (
 );
     assign out.resp = RESP_ERROR;
     assign out.ready = 1;
-endmodule
-
-module BusBRAM #(parameter SIZE) (
-    input logic clk,
-    input logic rst,
-    input logic sel,
-    input bus_slv_in in,
-    output bus_slv_out out
-);
-    logic [31:0] mem[SIZE]; 
-    
-    always @(posedge clk) begin
-        if (sel && in.ready && in.trans == NONSEQ) begin
-            if (in.write)
-                mem[in.addr] <= in.wdata;
-            else
-                out.rdata <= mem[in.addr];
-            out.ready <= 1;
-        end
-    end
-   
 endmodule
 

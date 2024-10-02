@@ -1,6 +1,7 @@
-typedef enum logic {
+typedef enum {
     FETCH_NEED,
-    FETCH_WAITING
+    FETCH_WAITING,
+    FETCH_READING
 } fetch_status;
 
 module CU (
@@ -25,32 +26,40 @@ module CU (
     logic[6:0] imm_11_5;
     logic[4:0] imm_4_0;
 
-    always @(posedge clock or negedge reset) begin
+    always_ff @(posedge clock or negedge reset) begin
         if (!reset) begin
             x <= '{default: 0};
             pc <= 0;
-            instruction <= 0;
         end else begin
+            $display("Checking if an instruction is needed");
             case (fetch)
             FETCH_NEED: if (bus.ready) begin
+                $display("We need an instruction");
                 bus.address <= pc;
                 bus.write <= 0;
                 bus.start <= 1;
                 fetch <= FETCH_WAITING;
-                pc <= pc + 4;
             end
-            FETCH_WAITING: if (bus.ready) begin
-                $display("waiting");
-                if (bus.response == RESP_ERROR) begin
-                    $error("Bus responded with error during instruction fetch");
-                end else begin
-                    fetch_inst <= bus.read_data; 
-                    fetch <= FETCH_WAITING;
+            FETCH_WAITING: begin 
+                bus.start <= 0;
+                $display("We're waiting for an instruction");
+                if (bus.ready) begin
+                    $display("... And got one");
+                    if (bus.response == RESP_ERROR) begin
+                        $error("Bus responded with error during instruction fetch");
+                    end else begin 
+                        fetch <= FETCH_READING;
+                    end
                 end
             end
+            FETCH_READING: begin
+                $display("We're reading an instruction");
+                fetch <= FETCH_NEED;
+                instruction <= bus.read_data;
+            end
             endcase
+            $display("we have the instruction %d", instruction);
         end
-        $display("%d", instruction);
     end
 endmodule
 
