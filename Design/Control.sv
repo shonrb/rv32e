@@ -4,7 +4,7 @@ typedef enum {
     FETCH_READING
 } fetch_status;
 
-module CU (
+module Control (
     input clock,
     input reset,
     bus_master.out bus
@@ -12,19 +12,13 @@ module CU (
     fetch_status fetch;    
     
     logic[31:0] fetch_inst;
+    logic [31:0] x [16];
+    logic [31:0] pc;
+    logic [31:0] instruction; 
 
-    logic[31:0] x [16];
-    logic[31:0] pc;
-    logic[31:0] instruction; 
-    logic[6:0] opcode;
-    logic[6:0] funct7;
-    logic[4:0] rs2;
-    logic[4:0] rs1;
-    logic[4:0] rd;
-    logic[2:0] funct3;
-    logic[11:0] imm_11_0;
-    logic[6:0] imm_11_5;
-    logic[4:0] imm_4_0;
+    instruction i();
+
+    Splitter splitter(.inst(i));
 
     always_ff @(posedge clock or negedge reset) begin
         if (!reset) begin

@@ -42,7 +42,7 @@ module Top (
     assign conn_out[0].ready = ext_1_ready; 
     assign conn_out[0].resp  = ext_1_resp; 
 
-    CU cu (
+    Control cu (
         .clock(clock),
         .reset(reset),
         .bus(master)
@@ -69,5 +69,12 @@ module Top (
         $display("Test");
         $display("from top: %d", ext_1_rdata);
     end
+
+    function [31:0] get_instruction; 
+        /* verilator public */ 
+        begin 
+            get_instruction = cu.instruction;
+        end 
+    endfunction
 endmodule
 
