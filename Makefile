@@ -2,7 +2,7 @@ VSRC   = $(wildcard Hardware/*.sv)
 CSRC   = Simulation/Main.cpp
 CTST   = Simulation/Test.cpp
 CLIB   = $(wildcard Simulation/*.hpp)
-VFLAGS = --x-assign 1 --cc --exe --build --Mdir Build --top-module Top
+VFLAGS = --x-assign 1 --cc --exe --build --Mdir Build --top-module Top -IHardware
 CFLAGS = --std=c++23
 BIN    = sim
 TST    = test

@@ -1,3 +1,4 @@
+`include "Common.svh"
 
 module Fetch (
     input clock, 
@@ -7,54 +8,54 @@ module Fetch (
     skid_buffer_port.downstream decoder
 );
     enum {
-        IDLE,
-        NEED, 
+        IDLE, 
         WAITING
     } state;
 
-    logic [31:0] reh;
-
     always @(posedge clock or negedge reset) begin
         if (!reset) begin
-            state <= NEED;
+            `LOG(("Resetting fetch"));
+            state <= IDLE;
         end else begin
             // TODO: This initiates a new NONSEQ transfer for each instruction.
             // Should ideally use bursts with an i-cache
-            $display("We have %d", decoder.data);
             case (state)
-            IDLE: begin
-                $display("No intruction needed");
-                if (decoder.ready)
-                    state <= NEED;
-            end
-            NEED: if (bus.ready) begin
-                $display("We need an instruction");
-                bus.address <= pc;
-                bus.write <= 0;
-                bus.start <= 1;
-                state <= WAITING;
+            IDLE: begin 
+                `LOG(("No fetch in progress..."));
+                if (bus.ready && decoder.ready) begin
+                    `LOG(("Starting a fetch..."));
+                    bus.address <= pc;
+                    bus.write <= 0;
+                    bus.start <= 1;
+                    state <= WAITING;
+                end else if (!bus.ready) begin
+                    `LOG(("...Bus is busy"));
+                end else begin
+                    `LOG(("...Decoder is busy"));
+                end
             end
             WAITING: begin 
-                $display("We're waiting for an instruction");
+                `LOG(("Fetch in progress..."));
                 if (bus.ready && bus.active) begin
-                    $display("... And got one");
+                    `LOG(("...Got a reply from bus..."));
                     if (bus.response == RESP_ERROR) begin
-                        $error("Bus responded with error during instruction fetch");
+                        `LOG(("...Bus responded with error"));
+                        decoder.valid <= 0;
                     end else begin 
-                        $display("Bus contains %d", bus.read_data);
+                        `LOG(("...Bus replied with %d", bus.read_data));
                         bus.start <= 0;
                         state <= IDLE;
                         decoder.valid <= 1;
                         decoder.data <= bus.read_data;
-                        reh <= bus.read_data;
                     end
+                end else if (!bus.ready) begin
+                    `LOG(("...Bus isn't ready yet"));
+                end else begin
+                    `LOG(("...Bus hasn't started transaction yet"));
                 end
             end
             endcase
         end
     end
-
- 
-
 endmodule
 

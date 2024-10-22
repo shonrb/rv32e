@@ -65,11 +65,6 @@ module Top (
         .slv_out(conn_out)
     );
 
-    always @(posedge clock) begin
-        $display("Test");
-        $display("from top: %d", cu.fetch_out.data);
-    end
-
     // Allow the simulation to access specific internal signals
     `define EXPOSE_SIGNAL(VALUE, NAME, TYPE) \
         function TYPE NAME;                  \

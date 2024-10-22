@@ -1,3 +1,5 @@
+`include "Common.svh"
+
 interface skid_buffer_port #(type T);
     logic ready;
     logic valid;
@@ -7,7 +9,7 @@ interface skid_buffer_port #(type T);
     modport downstream (input  ready, output valid, data);
 endinterface
 
-module SkidBuffer #(type T) (
+module SkidBuffer #(type T, string NAME) (
     input clock, 
     input reset,
     skid_buffer_port.upstream   up,
@@ -22,6 +24,7 @@ module SkidBuffer #(type T) (
 
     always @(posedge clock or negedge reset) begin
         if (!reset) begin
+            `LOG(("Resetting skid buffer \"%s\"", NAME));
             state <= ACTIVE;
             down.valid <= 0;
             up.ready <= 1;

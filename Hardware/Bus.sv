@@ -1,3 +1,5 @@
+`include "Common.svh"
+
 typedef enum logic [1:0] {
     IDLE   = 'b00,
     BUSY   = 'b01,
@@ -138,13 +140,14 @@ module BusControl (
         for (genvar i = 0; i < AHB_DEVICE_COUNT-1; i++) begin
             localparam [31:0] bnd = AHB_ADDR_MAP[i];
             if (prev > bnd)
-                $error("Bad");
+                $error("Memory map is not ordered");
             assign prev = bnd;
         end
     endgenerate
 
     always @(posedge clk or negedge rst) begin
         if (!rst) begin
+            `LOG(("Resetting bus controller"));
             trans <= IDLE;
             sel <= 1;
         end else begin
@@ -153,12 +156,14 @@ module BusControl (
                 case (trans)
                 IDLE: begin
                     if (bus.start) begin
+                        `LOG(("Tranfer type set to NONSEQ"));
                         trans <= NONSEQ;
                     end 
                 end
                 BUSY: begin end
                 NONSEQ: begin 
                     if (!bus.start) begin
+                        `LOG(("Tranfer type set to IDLE"));
                         trans <= IDLE;
                     end
                 end
@@ -170,30 +175,19 @@ module BusControl (
             for (int i = 0; i < AHB_DEVICE_COUNT; i++) begin
                 automatic int from 
                     = (i == 0)              
-                    ? 32'b0       
+                    ? 32'b0
                     : 32'(AHB_ADDR_MAP[i-1]);
                 automatic int to   
                     = (i == AHB_DEVICE_COUNT-1) 
-                    ? 32'b1 << 32 
+                    ? 32'hFFFFFFFF 
                     : 32'(AHB_ADDR_MAP[i]) - 1;
                 if (bus.address >= from && bus.address <= to) begin
+                    `LOG(("Multiplexed address (%d) to device (%d)", bus.address, i));
                     sel <= 1 << i;
                     mux <= i;
                 end
             end
-            $display("from mst: %d, %d", bus.read_data, slv_out[0].rdata);
         end
     end
-endmodule
-
-module BusNoSlave (
-    input logic clk,
-    input logic rst,
-    input logic sel,
-    input bus_slv_in in,
-    output bus_slv_out out
-);
-    assign out.resp = RESP_ERROR;
-    assign out.ready = 1;
 endmodule
 

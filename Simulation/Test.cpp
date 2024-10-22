@@ -111,12 +111,11 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
 void test_fetch(MainDesign &sim, TestContext &test)
 {
     constexpr u32 expect = 1234321;
-    sim.reset();
     sim.write_word(0, expect);
-    sim.pulse(); // Acknowledge needed instruction
-    sim.pulse(); // Begin transfer
-    sim.pulse(); // Bus master activates
-    sim.pulse(); // Read instruction
+    sim.reset();
+    sim.cycle(); // Begin transfer
+    sim.cycle(); // Bus master activates
+    sim.cycle(); // Read instruction
 
     u32 inst = sim.read_instruction();
     

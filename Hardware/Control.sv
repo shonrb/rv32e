@@ -1,3 +1,5 @@
+`include "Common.svh"
+
 typedef enum {
     FETCH_IDLE,
     FETCH_NEED,
@@ -37,13 +39,13 @@ module Control (
 
     skid_buffer_port #(.T(logic[31:0])) fetch_out(); 
     skid_buffer_port #(.T(logic[31:0])) decode_in(); 
-    SkidBuffer       #(.T(logic[31:0])) fetch_to_decode(
+    SkidBuffer       #(.T(logic[31:0]), .NAME("fetch->decode")) fetch_to_decode(
         .clock(clock), .reset(reset), .up(fetch_out), .down(decode_in)
     );
 
     skid_buffer_port #(.T(instruction_signals)) decode_out(); 
     skid_buffer_port #(.T(instruction_signals)) execute_in(); 
-    SkidBuffer       #(.T(instruction_signals)) decode_to_execute(
+    SkidBuffer       #(.T(instruction_signals), .NAME("decode->execute")) decode_to_execute(
         .clock(clock), .reset(reset), .up(decode_out), .down(execute_in)
     );
 
@@ -60,8 +62,13 @@ module Control (
         .execute(decode_out)
     );
 
+    Execute execute(
+        .decoder(execute_in)
+    );
+
     always @(posedge clock or negedge reset) begin
         if (!reset) begin
+            `LOG(("Resetting control unit"));
             x <= '{default: 0};
             pc <= 0;
         end else begin

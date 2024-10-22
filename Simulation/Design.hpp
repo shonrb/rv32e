@@ -11,8 +11,8 @@
 
 namespace params
 {
-    constexpr auto device_count = VTop___024unit::AHB_DEVICE_COUNT;
-    constexpr auto address_map  = VTop___024unit::AHB_ADDR_MAP;
+constexpr auto device_count = VTop___024unit::AHB_DEVICE_COUNT;
+constexpr auto address_map  = VTop___024unit::AHB_ADDR_MAP;
 }
 
 template<BusDevice ...Devices> 
@@ -26,6 +26,8 @@ class Design
     std::shared_ptr<VerilatedContext> context;
     std::unique_ptr<VTop> top;
     DeviceMap devices;
+    bool logging = false;
+    usize cycle_count = 0;
 
 public:
     Design(std::shared_ptr<VerilatedContext> ctx)
@@ -61,8 +63,9 @@ public:
         }
     }
 
-    void pulse() 
+    void cycle() 
     {
+        log("Doing clock cycle {}", ++cycle_count);
         top->clock = 1;
         top->eval();
         top->clock = 0;
@@ -72,10 +75,10 @@ public:
 
     void reset()
     {
+        log("Resetting core");
         top->reset = 0;
-        pulse();
+        cycle();
         top->reset = 1;
-        pulse();
     }
 
     void write_word(u32 addr, u32 value)
@@ -88,7 +91,23 @@ public:
         return top->Top->sig_instruction();
     }
 
+    void set_logging(bool l)
+    {
+        logging = l;
+        top->__024unit->set_logging(l);
+    }
+
+
 private:
+    
+    template<typename ...Ts>
+    void log(std::format_string<Ts...> fmt, Ts &&...args)
+    {
+        if (logging) {
+            std::println(fmt, args...);
+        }
+    }
+
     std::unique_ptr<BusDeviceBase> &mux_devices(u32 addr)
     {
         usize current = 0;
