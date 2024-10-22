@@ -36,15 +36,28 @@ class TestContext
 {
     usize passed = 0;
     usize out_of = 0;
+    usize id;
+    std::string name;
 
 public:
+    TestContext(std::string n, usize i)
+    : id(i)
+    , name(n)
+    {}
+
     void test_assert(bool cond, const std::string &msg)
     {
         ++out_of;
         if (cond) {
             ++passed;
         } else {
-            print_coloured(false, "Assertion failed: {}", msg);
+            print_coloured(
+                false, 
+                "Test {} ({}) : Assertion failed : {}", 
+                id, 
+                name, 
+                msg
+            );
         }
     }
 
@@ -69,7 +82,9 @@ private:
         bool good = passed == out_of;
         print_coloured(
             good,
-            "Test {}: {} / {} assertions held",
+            "Test {} ({}) {} : {} / {} assertions held",
+            id, 
+            name,
             good ? "passed" : "failed",
             passed,
             out_of
@@ -92,10 +107,8 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
     usize test_number  = 1;
     
     ([&] {
-        std::println("Running test {}: {}", test_number, tests.name);        
-
         auto sim = MainDesign(ctx);
-        auto test_ctx = TestContext{};
+        auto test_ctx = TestContext(tests.name, test_number);
         tests.run_test(sim, test_ctx);
 
         bool passed = test_ctx.finish();
@@ -111,7 +124,6 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
 void test_fetch(MainDesign &sim, TestContext &test)
 {
     constexpr u32 expect = 1234321;
-    sim.set_logging(true);
     sim.write_word(0, expect);
     sim.reset();
     sim.cycle(); // Begin transfer

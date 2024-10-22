@@ -55,24 +55,23 @@ interface bus_slv_out;
 endinterface
 
 interface bus_master;
-    //logic start;
     transfer_kind trans;
+    logic available;
     logic write;
     logic [31:0] address;
     logic [31:0] write_data;
     wire [31:0] read_data;
-    //logic active;
     transfer_response response;
     logic ready;
 
     modport in (
         input write, address, write_data, trans,
-        output read_data, response, ready
+        output read_data, response, ready, available
     );
 
     modport out (
         output write, address, write_data, trans,
-        input read_data, response, ready
+        input read_data, response, ready, available
     );
 endinterface
 
@@ -120,8 +119,6 @@ module BusControl (
         .resp(bus.response)
     );
 
-    //transfer_kind trans;
-
     // TODO: Locked transfers, Sized transfers, bursts(?), protection(??)
     assign slv_in.ready    = bus.ready;
     assign slv_in.addr     = bus.address;
@@ -133,7 +130,7 @@ module BusControl (
     assign slv_in.mastlock = 0;
     assign slv_in.wdata    = bus.write_data;
 
-    //assign bus.active = trans == SEQ || trans == NONSEQ;
+    assign bus.available = bus.trans == BUS_TRANSFER_IDLE;
 
     // Ensure memory map is ordered
     generate 
@@ -149,31 +146,8 @@ module BusControl (
     always @(posedge clk or negedge rst) begin
         if (!rst) begin
             `LOG(("Resetting bus controller"));
-            //trans <= IDLE;
             sel <= 1;
         end else begin
-            // Transfer states
-            /*
-            if (bus.ready) begin
-                case (trans)
-                IDLE: begin
-                    if (bus.start) begin
-                        `LOG(("Tranfer type set to NONSEQ"));
-                        trans <= NONSEQ;
-                    end 
-                end
-                BUSY: begin end
-                NONSEQ: begin 
-                    if (!bus.start) begin
-                        `LOG(("Tranfer type set to IDLE"));
-                        trans <= IDLE;
-                    end
-                end
-                SEQ: begin end
-                endcase
-            end
-            */
-
             // Address Decoding
             for (int i = 0; i < AHB_DEVICE_COUNT; i++) begin
                 automatic int from 

@@ -22,7 +22,7 @@ module Fetch (
             case (state)
             IDLE: begin 
                 `LOG(("No fetch in progress..."));
-                if (bus.ready && decoder.ready && bus.trans == BUS_TRANSFER_IDLE) begin
+                if (bus.available && bus.ready && decoder.ready) begin
                     `LOG(("Starting a fetch..."));
                     bus.address <= pc;
                     bus.write <= 0;
