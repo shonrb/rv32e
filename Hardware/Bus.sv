@@ -58,30 +58,31 @@ interface bus_master;
     logic [31:0] address;
     logic [31:0] write_data;
     wire [31:0] read_data;
+    logic active;
     transfer_response response;
     logic ready;
 
     modport in (
         input start, write, address, write_data,
-        output read_data, response, ready
+        output read_data, response, ready, active
     );
 
     modport out (
         output start, write, address, write_data,
-        input read_data, response, ready
+        input read_data, response, ready, active
     );
 endinterface
 
 module BusMux (
-    input bus_slv_out out[AHB_SLAVE_COUNT],
+    input bus_slv_out out[AHB_DEVICE_COUNT],
     input logic [31:0] mux,
     output logic [31:0] rdata,
     output logic ready,
     output transfer_response resp
 );
-    logic [31:0] out_rdata[AHB_SLAVE_COUNT];
-    logic out_ready[AHB_SLAVE_COUNT];
-    transfer_response out_resp[AHB_SLAVE_COUNT];
+    logic [31:0] out_rdata[AHB_DEVICE_COUNT];
+    logic out_ready[AHB_DEVICE_COUNT];
+    transfer_response out_resp[AHB_DEVICE_COUNT];
 
     assign rdata = out_rdata[mux];
     assign ready = out_ready[mux];
@@ -89,7 +90,7 @@ module BusMux (
 
     generate 
         genvar i;
-        for (i = 0; i < AHB_SLAVE_COUNT; ++i) begin
+        for (i = 0; i < AHB_DEVICE_COUNT; ++i) begin
             assign out_rdata[i] = out[i].rdata;
             assign out_ready[i] = out[i].ready;
             assign out_resp[i]  = out[i].resp;
@@ -103,9 +104,9 @@ module BusControl (
     // Front facing
     bus_master.in bus,
     // Slaves
-    output logic [AHB_SLAVE_COUNT-1:0] sel,
+    output logic [AHB_DEVICE_COUNT-1:0] sel,
     output bus_slv_in slv_in,
-    input bus_slv_out slv_out[AHB_SLAVE_COUNT]
+    input bus_slv_out slv_out[AHB_DEVICE_COUNT]
 );
     logic [31:0] mux;
     BusMux bus_mux (
@@ -116,20 +117,25 @@ module BusControl (
         .resp(bus.response)
     );
 
+    transfer_kind trans;
+
     // TODO: Locked transfers, Sized transfers, bursts(?), protection(??)
     assign slv_in.ready    = bus.ready;
     assign slv_in.addr     = bus.address;
     assign slv_in.write    = bus.write;
+    assign slv_in.trans    = trans;
     assign slv_in.size     = HSIZE_32;
     assign slv_in.burst    = SINGLE;
     assign slv_in.prot     = '{0, 0, 1, 1};
     assign slv_in.mastlock = 0;
     assign slv_in.wdata    = bus.write_data;
 
+    assign bus.active = trans == SEQ || trans == NONSEQ;
+
     // Ensure memory map is ordered
     generate 
         localparam [31:0] prev = 0;
-        for (genvar i = 0; i < AHB_SLAVE_COUNT-1; i++) begin
+        for (genvar i = 0; i < AHB_DEVICE_COUNT-1; i++) begin
             localparam [31:0] bnd = AHB_ADDR_MAP[i];
             if (prev > bnd)
                 $error("Bad");
@@ -139,21 +145,21 @@ module BusControl (
 
     always @(posedge clk or negedge rst) begin
         if (!rst) begin
-            slv_in.trans <= IDLE;
+            trans <= IDLE;
             sel <= 1;
         end else begin
             // Transfer states
             if (bus.ready) begin
-                case (slv_in.trans)
+                case (trans)
                 IDLE: begin
                     if (bus.start) begin
-                        slv_in.trans <= NONSEQ;
+                        trans <= NONSEQ;
                     end 
                 end
                 BUSY: begin end
                 NONSEQ: begin 
                     if (!bus.start) begin
-                        slv_in.trans <= IDLE;
+                        trans <= IDLE;
                     end
                 end
                 SEQ: begin end
@@ -161,16 +167,16 @@ module BusControl (
             end
 
             // Address Decoding
-            for (int i = 0; i < AHB_SLAVE_COUNT; i++) begin
+            for (int i = 0; i < AHB_DEVICE_COUNT; i++) begin
                 automatic int from 
                     = (i == 0)              
                     ? 32'b0       
                     : 32'(AHB_ADDR_MAP[i-1]);
                 automatic int to   
-                    = (i == AHB_SLAVE_COUNT-1) 
+                    = (i == AHB_DEVICE_COUNT-1) 
                     ? 32'b1 << 32 
-                    : 32'(AHB_ADDR_MAP[i]);
-                if (bus.address >= from && bus.address < to) begin
+                    : 32'(AHB_ADDR_MAP[i]) - 1;
+                if (bus.address >= from && bus.address <= to) begin
                     sel <= 1 << i;
                     mux <= i;
                 end
