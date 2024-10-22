@@ -3,12 +3,11 @@
 #include <functional>
 #include <ranges>
 
+#include "verilated.h"
 #include "VTop__Dpi.h"
 #include "VTop.h"
-#include "verilated.h"
 #include "VTop___024unit.h"
 #include "VTop_Top.h"
-
 
 namespace params
 {
@@ -18,7 +17,7 @@ namespace params
 
 template<BusDevice ...Devices> 
 requires (sizeof...(Devices) == params::device_count)
-class Simulation
+class Design
 {
     using DeviceMap = std::array<
         std::unique_ptr<BusDeviceBase>, 
@@ -29,7 +28,7 @@ class Simulation
     DeviceMap devices;
 
 public:
-    Simulation(std::shared_ptr<VerilatedContext> ctx)
+    Design(std::shared_ptr<VerilatedContext> ctx)
     : context(ctx)
     , top(new VTop{context.get()})
     , devices(init_devices())
@@ -40,7 +39,7 @@ public:
         top->eval();
     }
 
-    ~Simulation()
+    ~Design()
     {
         top->final();
     }
@@ -128,5 +127,5 @@ private:
     }
 };
 
-using MainSim = Simulation<MemDevice, NCDevice>;
+using MainDesign = Design<MemDevice, NCDevice>;
 

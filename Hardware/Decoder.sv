@@ -72,6 +72,7 @@ typedef enum [2:0] {
     STORE_WORD     = 'b010
 } funct3_store;
 
+
 interface instruction_format;
     logic [31:0] encoded;
     logic [6:0]  opcode;
@@ -99,34 +100,43 @@ interface instruction_format;
     );
 endinterface
 
-module Decoder(instruction_format.back inst);
-    assign inst.opcode    = inst.encoded[6:0]; 
-    assign inst.funct7    = inst.encoded[31:25];
-    assign inst.rs2       = inst.encoded[24:20];
-    assign inst.rs1       = inst.encoded[19:15];
-    assign inst.funct3    = inst.encoded[14:12];
-    assign inst.rd        = inst.encoded[11:7];
+module Decode(skid_buffer_port.upstream fetch, skid_buffer_port.downstream execute);
+    // Shorthand for i/o
+    instruction_signals signals;
+    logic [31:0] encoded;
+    assign encoded = fetch.data;
+    assign execute.data = signals;
 
-    assign inst.i_immediate[31:11] = {21{inst.encoded[31]}};
-    assign inst.i_immediate[10:0]  = inst.encoded[30:20];
 
-    assign inst.s_immediate[31:11] = {21{inst.encoded[31]}};
-    assign inst.s_immediate[10:5]  = inst.encoded[30:25];
-    assign inst.s_immediate[4:0]   = inst.encoded[11:7];
+    assign signals.opcode  = encoded[6:0]; 
+    assign signals.funct7  = encoded[31:25];
+    assign signals.rs2     = encoded[24:20];
+    assign signals.rs1     = encoded[19:15];
+    assign signals.funct3  = encoded[14:12];
+    assign signals.rd      = encoded[11:7];
 
-    assign inst.b_immediate[31:12] = {20{inst.encoded[31]}};
-    assign inst.b_immediate[11]    = inst.encoded[7];
-    assign inst.b_immediate[10:5]  = inst.encoded[30:25];
-    assign inst.b_immediate[4:1]   = inst.encoded[11:8];
-    assign inst.b_immediate[0]     = 0;
+    assign signals.i_immediate[31:11] = {21{encoded[31]}};
+    assign signals.i_immediate[10:0]  = encoded[30:20];
 
-    assign inst.u_immediate[31:12] = inst.encoded[31:12];
-    assign inst.u_immediate[11:0]  = 0;
+    assign signals.s_immediate[31:11] = {21{encoded[31]}};
+    assign signals.s_immediate[10:5]  = encoded[30:25];
+    assign signals.s_immediate[4:0]   = encoded[11:7];
 
-    assign inst.j_immediate[31:20] = {12{inst.encoded[31]}};
-    assign inst.j_immediate[19:12] = inst.encoded[19:12];
-    assign inst.j_immediate[11]    = inst.encoded[20];
-    assign inst.j_immediate[10:1]  = inst.encoded[30:21];
-    assign inst.j_immediate[0]     = 0;
+    assign signals.b_immediate[31:12] = {20{encoded[31]}};
+    assign signals.b_immediate[11]    = encoded[7];
+    assign signals.b_immediate[10:5]  = encoded[30:25];
+    assign signals.b_immediate[4:1]   = encoded[11:8];
+    assign signals.b_immediate[0]     = 0;
+
+    assign signals.u_immediate[31:12] = encoded[31:12];
+    assign signals.u_immediate[11:0]  = 0;
+
+    assign signals.j_immediate[31:20] = {12{encoded[31]}};
+    assign signals.j_immediate[19:12] = encoded[19:12];
+    assign signals.j_immediate[11]    = encoded[20];
+    assign signals.j_immediate[10:1]  = encoded[30:21];
+    assign signals.j_immediate[0]     = 0;
+
+    // TODO: exception on invalid instructions
 endmodule
 

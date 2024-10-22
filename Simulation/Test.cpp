@@ -1,7 +1,7 @@
 #include "Common.hpp"
 #include "Device.hpp"
 #include "Memory.hpp"
-#include "Sim.hpp"
+#include "Design.hpp"
 
 #include <print>
 #include <optional>
@@ -20,7 +20,7 @@ void print_coloured(bool success, std::format_string<Ts...> fmt, Ts &&...args)
 class TestContext;
 
 template<typename T>
-concept TestFunction = requires (T t, MainSim &s, TestContext &f)
+concept TestFunction = requires (T t, MainDesign &s, TestContext &f)
 {
     t(s, f);
 };
@@ -94,7 +94,7 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
     ([&] {
         std::println("Running test {}: {}", test_number, tests.name);        
 
-        auto sim = MainSim(ctx);
+        auto sim = MainDesign(ctx);
         auto test_ctx = TestContext{};
         tests.run_test(sim, test_ctx);
 
@@ -108,17 +108,17 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
     print_coloured(tests_passed == out_of, "{} tests passed out of {}", tests_passed, out_of);
 }
 
-void test_fetch(MainSim &simulation, TestContext &test)
+void test_fetch(MainDesign &sim, TestContext &test)
 {
     constexpr u32 expect = 1234321;
-    simulation.reset();
-    simulation.write_word(0, expect);
-    simulation.pulse(); // Acknowledge needed instruction
-    simulation.pulse(); // Begin transfer
-    simulation.pulse(); // Bus master activates
-    simulation.pulse(); // Read instruction
+    sim.reset();
+    sim.write_word(0, expect);
+    sim.pulse(); // Acknowledge needed instruction
+    sim.pulse(); // Begin transfer
+    sim.pulse(); // Bus master activates
+    sim.pulse(); // Read instruction
 
-    u32 inst = simulation.read_instruction();
+    u32 inst = sim.read_instruction();
     
     test.test_assert_eq(expect, inst, "wrong instruction fetched");
 }

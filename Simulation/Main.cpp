@@ -1,7 +1,7 @@
 #include "Common.hpp"
 #include "Device.hpp"
 #include "Memory.hpp"
-#include "Sim.hpp"
+#include "Design.hpp"
 
 #include <concepts>
 #include <iostream>
@@ -14,7 +14,7 @@ int main(int argc, const char **argv)
     context->commandArgs(argc, argv);
     auto top = std::make_unique<VTop>(context.get());
 
-    Simulation<MemDevice, NCDevice> sim(context);
+    Design<MemDevice, NCDevice> sim(context);
 
     auto bus = BusDeviceSignals { 
         .sel          = top->ext_sel[0],
