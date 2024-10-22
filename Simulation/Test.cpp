@@ -36,14 +36,18 @@ class TestContext
 {
     usize passed = 0;
     usize out_of = 0;
+    std::string test_name = "Unnamed test";
     usize id;
-    std::string name;
 
 public:
-    TestContext(std::string n, usize i)
+    TestContext(usize i)
     : id(i)
-    , name(n)
     {}
+
+    void name(std::string s)
+    {
+        test_name = s;
+    }
 
     void test_assert(bool cond, const std::string &msg)
     {
@@ -55,7 +59,7 @@ public:
                 false, 
                 "Test {} ({}) : Assertion failed : {}", 
                 id, 
-                name, 
+                test_name, 
                 msg
             );
         }
@@ -84,7 +88,7 @@ private:
             good,
             "Test {} ({}) {} : {} / {} assertions held",
             id, 
-            name,
+            test_name,
             good ? "passed" : "failed",
             passed,
             out_of
@@ -108,7 +112,7 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
     
     ([&] {
         auto sim = MainDesign(ctx);
-        auto test_ctx = TestContext(tests.name, test_number);
+        auto test_ctx = TestContext(test_number);
         tests.run_test(sim, test_ctx);
 
         bool passed = test_ctx.finish();
@@ -123,6 +127,8 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
 
 void test_fetch(MainDesign &sim, TestContext &test)
 {
+    test.name("Instruction fetch working");
+
     constexpr u32 expect = 1234321;
     sim.write_word(0, expect);
     sim.reset();

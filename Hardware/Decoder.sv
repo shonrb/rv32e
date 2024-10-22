@@ -137,6 +137,9 @@ module Decode(skid_buffer_port.upstream fetch, skid_buffer_port.downstream execu
     assign signals.j_immediate[10:1]  = encoded[30:21];
     assign signals.j_immediate[0]     = 0;
 
-    // TODO: exception on invalid instructions
+    // TODO: check for invalid instructions, maybe read registers?
+
+    assign fetch.ready = execute.ready;
+    assign execute.valid = fetch.valid;
 endmodule
 

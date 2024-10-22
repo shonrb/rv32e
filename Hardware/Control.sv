@@ -33,9 +33,10 @@ module Control (
     input reset,
     bus_master.out bus
 );
-
     logic [31:0] x [16];
     logic [31:0] pc;
+
+    logic increment;
 
     skid_buffer_port #(.T(logic[31:0])) fetch_out(); 
     skid_buffer_port #(.T(logic[31:0])) decode_in(); 
@@ -53,6 +54,7 @@ module Control (
         .clock(clock),
         .reset(reset),
         .pc(pc),
+        .increment(increment),
         .bus(bus),
         .decoder(fetch_out)
     );
@@ -75,7 +77,10 @@ module Control (
             x <= '{default: 0};
             pc <= 0;
         end else begin
-            
+            if (increment) begin
+                `LOG(("Incrementing pc to (%d)", pc + 4));
+                pc <= pc + 4;
+            end
         end
     end
 endmodule
