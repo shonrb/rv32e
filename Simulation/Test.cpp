@@ -111,12 +111,11 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
 void test_fetch(MainDesign &sim, TestContext &test)
 {
     constexpr u32 expect = 1234321;
+    sim.set_logging(true);
     sim.write_word(0, expect);
     sim.reset();
     sim.cycle(); // Begin transfer
-    sim.cycle(); // Bus master activates
-    sim.cycle(); // Read instruction
-
+    sim.cycle(); // Should have a reply
     u32 inst = sim.read_instruction();
     
     test.test_assert_eq(expect, inst, "wrong instruction fetched");

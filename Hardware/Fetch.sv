@@ -22,11 +22,11 @@ module Fetch (
             case (state)
             IDLE: begin 
                 `LOG(("No fetch in progress..."));
-                if (bus.ready && decoder.ready) begin
+                if (bus.ready && decoder.ready && bus.trans == BUS_TRANSFER_IDLE) begin
                     `LOG(("Starting a fetch..."));
                     bus.address <= pc;
                     bus.write <= 0;
-                    bus.start <= 1;
+                    bus.trans <= BUS_TRANSFER_NONSEQ;
                     state <= WAITING;
                 end else if (!bus.ready) begin
                     `LOG(("...Bus is busy"));
@@ -36,23 +36,21 @@ module Fetch (
             end
             WAITING: begin 
                 `LOG(("Fetch in progress..."));
-                if (bus.ready && bus.active) begin
+                if (bus.ready) begin
                     `LOG(("...Got a reply from bus..."));
                     if (bus.response == RESP_ERROR) begin
                         `LOG(("...Bus responded with error"));
                         decoder.valid <= 0;
                     end else begin 
                         `LOG(("...Bus replied with %d", bus.read_data));
-                        bus.start <= 0;
+                        bus.trans <= BUS_TRANSFER_IDLE;
                         state <= IDLE;
                         decoder.valid <= 1;
                         decoder.data <= bus.read_data;
                     end
-                end else if (!bus.ready) begin
-                    `LOG(("...Bus isn't ready yet"));
                 end else begin
-                    `LOG(("...Bus hasn't started transaction yet"));
-                end
+                    `LOG(("...Bus isn't ready yet"));
+                end 
             end
             endcase
         end

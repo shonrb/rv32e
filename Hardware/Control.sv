@@ -63,7 +63,10 @@ module Control (
     );
 
     Execute execute(
-        .decoder(execute_in)
+        .clock(clock),
+        .reset(reset),
+        .decoder(execute_in),
+        .bus(bus)
     );
 
     always @(posedge clock or negedge reset) begin

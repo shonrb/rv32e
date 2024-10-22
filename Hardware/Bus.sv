@@ -1,10 +1,10 @@
 `include "Common.svh"
 
 typedef enum logic [1:0] {
-    IDLE   = 'b00,
-    BUSY   = 'b01,
-    NONSEQ = 'b10,
-    SEQ    = 'b11
+    BUS_TRANSFER_IDLE   = 'b00,
+    BUS_TRANSFER_BUSY   = 'b01,
+    BUS_TRANSFER_NONSEQ = 'b10,
+    BUS_TRANSFER_SEQ    = 'b11
 } transfer_kind;
 
 typedef enum logic [1:0] {
@@ -55,23 +55,24 @@ interface bus_slv_out;
 endinterface
 
 interface bus_master;
-    logic start;
+    //logic start;
+    transfer_kind trans;
     logic write;
     logic [31:0] address;
     logic [31:0] write_data;
     wire [31:0] read_data;
-    logic active;
+    //logic active;
     transfer_response response;
     logic ready;
 
     modport in (
-        input start, write, address, write_data,
-        output read_data, response, ready, active
+        input write, address, write_data, trans,
+        output read_data, response, ready
     );
 
     modport out (
-        output start, write, address, write_data,
-        input read_data, response, ready, active
+        output write, address, write_data, trans,
+        input read_data, response, ready
     );
 endinterface
 
@@ -119,20 +120,20 @@ module BusControl (
         .resp(bus.response)
     );
 
-    transfer_kind trans;
+    //transfer_kind trans;
 
     // TODO: Locked transfers, Sized transfers, bursts(?), protection(??)
     assign slv_in.ready    = bus.ready;
     assign slv_in.addr     = bus.address;
     assign slv_in.write    = bus.write;
-    assign slv_in.trans    = trans;
+    assign slv_in.trans    = bus.trans;
     assign slv_in.size     = HSIZE_32;
     assign slv_in.burst    = SINGLE;
     assign slv_in.prot     = '{0, 0, 1, 1};
     assign slv_in.mastlock = 0;
     assign slv_in.wdata    = bus.write_data;
 
-    assign bus.active = trans == SEQ || trans == NONSEQ;
+    //assign bus.active = trans == SEQ || trans == NONSEQ;
 
     // Ensure memory map is ordered
     generate 
@@ -148,10 +149,11 @@ module BusControl (
     always @(posedge clk or negedge rst) begin
         if (!rst) begin
             `LOG(("Resetting bus controller"));
-            trans <= IDLE;
+            //trans <= IDLE;
             sel <= 1;
         end else begin
             // Transfer states
+            /*
             if (bus.ready) begin
                 case (trans)
                 IDLE: begin
@@ -170,6 +172,7 @@ module BusControl (
                 SEQ: begin end
                 endcase
             end
+            */
 
             // Address Decoding
             for (int i = 0; i < AHB_DEVICE_COUNT; i++) begin
