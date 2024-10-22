@@ -18,7 +18,7 @@ namespace params
 
 template<BusDevice ...Devices> 
 requires (sizeof...(Devices) == params::device_count)
-struct Simulation
+class Simulation
 {
     using DeviceMap = std::array<
         std::unique_ptr<BusDeviceBase>, 
@@ -81,7 +81,7 @@ public:
 
     void write_word(u32 addr, u32 value)
     {
-
+        mux_devices(addr)->write(addr, value);
     }
 
     u32 read_instruction() const

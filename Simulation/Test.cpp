@@ -112,7 +112,7 @@ void test_fetch(MainSim &simulation, TestContext &test)
 {
     constexpr u32 expect = 1234321;
     simulation.reset();
-    simulation.devices[0]->write(0, expect);
+    simulation.write_word(0, expect);
     simulation.pulse(); // Acknowledge needed instruction
     simulation.pulse(); // Begin transfer
     simulation.pulse(); // Bus master activates
