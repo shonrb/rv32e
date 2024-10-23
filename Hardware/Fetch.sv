@@ -1,12 +1,12 @@
 `include "Common.svh"
 
-module Fetch (
+module FetchUnit (
     input clock, 
     input reset, 
     input [31:0] pc,
     output logic increment,
     bus_master.out bus,
-    skid_buffer_port.downstream decoder
+    skid_buffer_port.downstream to_decode
 );
     enum {
         IDLE, 
@@ -23,7 +23,7 @@ module Fetch (
             case (state)
             IDLE: begin 
                 `LOG(("No fetch in progress..."));
-                if (bus.available && bus.ready && decoder.ready) begin
+                if (bus.available && bus.ready && to_decode.ready) begin
                     `LOG(("...Starting fetch at address (%d)", pc));
                     bus.address <= pc;
                     bus.write <= 0;
@@ -45,12 +45,12 @@ module Fetch (
                     `LOG(("...Got a reply from bus..."));
                     if (bus.response == RESP_ERROR) begin
                         `LOG(("...Bus responded with error"));
-                        decoder.valid <= 0;
+                        to_decode.valid <= 0;
                     end else begin 
                         `LOG(("...Bus replied with (%d)", bus.read_data));
                         bus.trans <= BUS_TRANSFER_IDLE;
-                        decoder.valid <= 1;
-                        decoder.data <= bus.read_data;
+                        to_decode.valid <= 1;
+                        to_decode.data <= bus.read_data;
                         state <= IDLE;
                     end
                 end else begin

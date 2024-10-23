@@ -6,7 +6,6 @@
 #include <concepts>
 #include <iostream>
 
-
 int main(int argc, const char **argv)
 {
     auto context = std::make_shared<VerilatedContext>();
@@ -14,9 +13,11 @@ int main(int argc, const char **argv)
 
     auto sim = MainDesign(context);
     sim.set_logging(true);
+
     sim.write_word(0, 1111); 
     sim.write_word(4, 2222); 
     sim.write_word(8, 3333); 
+
     sim.reset();
     sim.cycle();
     sim.cycle();

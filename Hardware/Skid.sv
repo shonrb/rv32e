@@ -58,7 +58,7 @@ module SkidBuffer #(type T, string NAME) (
             end
             STALLED: begin
                 `LOG(("(%s) skid buffer is stalled with value...", NAME));
-                `LOG(("...%p", buffer));
+                `LOG(("...%p",  buffer));
                 if (down.ready) begin
                     // Down is ready again, pass the 
                     // buffered data and resume.

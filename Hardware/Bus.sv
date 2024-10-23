@@ -100,7 +100,7 @@ module BusMux (
     endgenerate
 endmodule
 
-module BusControl (
+module BusController (
     input clk,
     input rst,
     // Front facing

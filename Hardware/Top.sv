@@ -48,15 +48,13 @@ module Top (
         assign conn_out[i].resp  = ext_resp[i]; 
     end
 
-    // Control unit
-    Control cu (
+    ControlUnit cu (
         .clock(clock),
         .reset(reset),
         .bus(master)
     );
 
-    // Bus master
-    BusControl bus_control(
+    BusController bus_control(
         .clk(clock),
         .rst(reset),
         .bus(master),

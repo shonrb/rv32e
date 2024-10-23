@@ -1,34 +1,55 @@
 `include "Common.svh"
 
 typedef enum {
-    FETCH_IDLE,
-    FETCH_NEED,
-    FETCH_WAITING
-} fetch_status;
-
-typedef enum {
-    EXECUTE_IDLE,
-    EXECUTE_STARTING,
-    EXECUTE_NEED
-} execute_status;
+    INST_LUI,
+    INST_AUIPC,
+    INST_JAL,
+    INST_JALR,
+    INST_ADDI,
+    INST_SLTI,
+    INST_SLTIU,
+    INST_XORI,
+    INST_ORI,
+    INST_ANDI,
+    INST_SLLI,
+    INST_SRLI,
+    INST_SRAI,
+    INST_ADD,
+    INST_SUB,
+    INST_SLL,
+    INST_SLT,
+    INST_SLTU,
+    INST_XOR,
+    INST_SRL,
+    INST_SRA,
+    INST_OR,
+    INST_AND,
+    INST_BEQ,
+    INST_BNE,
+    INST_BLT,
+    INST_BGE,
+    INST_BLTU,
+    INST_BGEU,
+    INST_LB,
+    INST_LH,
+    INST_LW,
+    INST_LBU,
+    INST_LHU,
+    INST_SB,
+    INST_SH,
+    INST_SW,
+    INST_NOP
+} instruction_kind;
 
 typedef struct {
-    logic [31:0] encoded;
-    logic [6:0]  opcode;
-    logic [6:0]  funct7;
-    logic [4:0]  rs2;
-    logic [4:0]  rs1;
-    logic [4:0]  rd;
-    logic [2:0]  funct3;
+    instruction_kind instruction;
+    logic [31:0] immediate;
+    logic [4:0] operand_1;
+    logic [4:0] operand_2;
+    logic [4:0] destination;
+} decoded;
 
-    logic [31:0] i_immediate;
-    logic [31:0] s_immediate;
-    logic [31:0] b_immediate;
-    logic [31:0] u_immediate;
-    logic [31:0] j_immediate;
-} instruction_signals;
-
-module Control (
+module ControlUnit (
     input clock,
     input reset,
     bus_master.out bus
@@ -44,30 +65,32 @@ module Control (
         .clock(clock), .reset(reset), .up(fetch_out), .down(decode_in)
     );
 
-    skid_buffer_port #(.T(instruction_signals)) decode_out(); 
-    skid_buffer_port #(.T(instruction_signals)) execute_in(); 
-    SkidBuffer       #(.T(instruction_signals), .NAME("decode->execute")) decode_to_execute(
+    skid_buffer_port #(.T(decoded)) decode_out(); 
+    skid_buffer_port #(.T(decoded)) execute_in(); 
+    SkidBuffer       #(.T(decoded), .NAME("decode->execute")) decode_to_execute(
         .clock(clock), .reset(reset), .up(decode_out), .down(execute_in)
     );
 
-    Fetch fetch(
+    FetchUnit fetch(
         .clock(clock),
         .reset(reset),
         .pc(pc),
         .increment(increment),
         .bus(bus),
-        .decoder(fetch_out)
+        .to_decode(fetch_out)
     );
 
-    Decode decode(
-        .fetch(decode_in),
-        .execute(decode_out)
-    );
-
-    Execute execute(
+    DecodeUnit decode(
         .clock(clock),
         .reset(reset),
-        .decoder(execute_in),
+        .to_fetch(decode_in),
+        .to_execute(decode_out)
+    );
+
+    ExecuteUnit execute(
+        .clock(clock),
+        .reset(reset),
+        .to_decode(execute_in),
         .bus(bus)
     );
 

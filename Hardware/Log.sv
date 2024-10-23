@@ -16,6 +16,7 @@ begin
     "Hardware/Fetch.sv"   : colour_file = {8'h1b, "[32m"};
     "Hardware/Bus.sv"     : colour_file = {8'h1b, "[33m"};
     "Hardware/Skid.sv"    : colour_file = {8'h1b, "[34m"};
+    "Hardware/Execute.sv" : colour_file = {8'h1b, "[35m"};
     default               : colour_file = reset();
     endcase
 end
