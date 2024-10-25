@@ -68,62 +68,52 @@ typedef enum [2:0] {
     STORE_WORD     = 'b010
 } funct3_store;
 
-interface instruction_split;
-    logic [31:0] encoded;
+typedef struct {
     logic [6:0]  opcode;
     logic [6:0]  funct7;
     logic [4:0]  rs2;
     logic [4:0]  rs1;
     logic [4:0]  rd;
     logic [2:0]  funct3;
-
     logic [31:0] i_immediate;
     logic [31:0] s_immediate;
     logic [31:0] b_immediate;
     logic [31:0] u_immediate;
     logic [31:0] j_immediate;
     logic [31:0] shamt;
+} instruction_split;
 
-    modport back (
-        input encoded,
-        output 
-            opcode, funct7, rs2, rs1, rd, funct3, 
-            i_immediate, s_immediate, b_immediate, 
-            u_immediate, j_immediate, shamt
-    );
-endinterface
+module Splitter (input [31:0] encoded, output instruction_split split);
+    assign split.opcode  = encoded[6:0]; 
+    assign split.funct7  = encoded[31:25];
+    assign split.rs2     = encoded[24:20];
+    assign split.rs1     = encoded[19:15];
+    assign split.funct3  = encoded[14:12];
+    assign split.rd      = encoded[11:7];
 
-module Splitter (instruction_split.back split);
-    assign split.opcode  = split.encoded[6:0]; 
-    assign split.funct7  = split.encoded[31:25];
-    assign split.rs2     = split.encoded[24:20];
-    assign split.rs1     = split.encoded[19:15];
-    assign split.funct3  = split.encoded[14:12];
-    assign split.rd      = split.encoded[11:7];
+    assign split.i_immediate[31:11] = {21{encoded[31]}};
+    assign split.i_immediate[10:0]  = encoded[30:20];
 
-    assign split.i_immediate[31:11] = {21{split.encoded[31]}};
-    assign split.i_immediate[10:0]  = split.encoded[30:20];
+    assign split.s_immediate[31:11] = {21{encoded[31]}};
+    assign split.s_immediate[10:5]  = encoded[30:25];
+    assign split.s_immediate[4:0]   = encoded[11:7];
 
-    assign split.s_immediate[31:11] = {21{split.encoded[31]}};
-    assign split.s_immediate[10:5]  = split.encoded[30:25];
-    assign split.s_immediate[4:0]   = split.encoded[11:7];
-
-    assign split.b_immediate[31:12] = {20{split.encoded[31]}};
-    assign split.b_immediate[11]    = split.encoded[7];
-    assign split.b_immediate[10:5]  = split.encoded[30:25];
-    assign split.b_immediate[4:1]   = split.encoded[11:8];
+    assign split.b_immediate[31:12] = {20{encoded[31]}};
+    assign split.b_immediate[11]    = encoded[7];
+    assign split.b_immediate[10:5]  = encoded[30:25];
+    assign split.b_immediate[4:1]   = encoded[11:8];
     assign split.b_immediate[0]     = 0;
 
-    assign split.u_immediate[31:12] = split.encoded[31:12];
+    assign split.u_immediate[31:12] = encoded[31:12];
     assign split.u_immediate[11:0]  = 0;
 
-    assign split.j_immediate[31:20] = {12{split.encoded[31]}};
-    assign split.j_immediate[19:12] = split.encoded[19:12];
-    assign split.j_immediate[11]    = split.encoded[20];
-    assign split.j_immediate[10:1]  = split.encoded[30:21];
+    assign split.j_immediate[31:20] = {12{encoded[31]}};
+    assign split.j_immediate[19:12] = encoded[19:12];
+    assign split.j_immediate[11]    = encoded[20];
+    assign split.j_immediate[10:1]  = encoded[30:21];
     assign split.j_immediate[0]     = 0;
 
-    assign split.shamt[4:0]         = split.encoded[24:20];
+    assign split.shamt[4:0]         = encoded[24:20];
     assign split.shamt[31:5]        = 0;
 endmodule
 
@@ -134,19 +124,16 @@ module DecodeUnit (
     skid_buffer_port.downstream to_execute
 );
     // Individual signal parts
-    instruction_split split();
-    Splitter splitter(.split(split));
-    assign split.encoded = to_fetch.data;
+    instruction_split split;
+    Splitter splitter(.encoded(to_fetch.data), .split(split));
 
     // Error signalling
     logic valid;
 
-    // Decode only when either side is ready and there are no errors
+    // Decode only when both sides are ready and there are no unhandled errors
     assign to_fetch.ready   = to_execute.ready && valid;
     assign to_execute.valid = to_fetch.valid && valid;
     logic can_decode        = to_fetch.ready && to_execute.valid;
-
-
 
     always @(posedge clock or negedge reset) begin
         if (!reset) begin
@@ -154,7 +141,7 @@ module DecodeUnit (
             valid <= 1;
         end else begin
             if (can_decode) begin
-                `LOG(("Decoder can proceed"));
+                `LOG(("Decoder can proceed, decoding %s", describe_instruction(split)));
                 decode(); 
             end else begin
                 `LOG(("Decoder can not proceed..."));
@@ -167,16 +154,6 @@ module DecodeUnit (
             end
         end
     end
-
-    // Error helpers: deassert valid and log error msg
-    `define ERROR(FMT) \
-        begin          \
-            error();   \
-            `LOG(FMT); \
-        end
-
-    `define ERROR_BAD_FUNCT7() \
-        `ERROR(("bad"))
 
     task decode; 
         case (split.opcode)
@@ -191,7 +168,7 @@ module DecodeUnit (
         OPCODE_SOME_STORE:    decode_store();
         OPCODE_SOME_MISC_MEM: no_op();
         OPCODE_SOME_SYSTEM:   no_op();
-        default:              `ERROR(("err: bad opcode: (0b%b)", split.opcode))
+        default:              error();
         endcase
     endtask
 
@@ -205,7 +182,7 @@ module DecodeUnit (
         OP_IMM_ADDI:  i_instruction(INST_ADDI);
         OP_IMM_SLLI:  begin
             if (split.funct7 != 0) 
-                `ERROR_BAD_FUNCT7()
+                error();
             else
                 shift_imm_instruction(INST_SLLI);
         end 
@@ -213,7 +190,7 @@ module DecodeUnit (
             case (split.funct7)
             SHIFT_R_LOGIC: shift_imm_instruction(INST_SRLI);
             SHIFT_R_ARITH: shift_imm_instruction(INST_SRAI);
-            default:       `ERROR_BAD_FUNCT7()
+            default:       error();
             endcase
         endcase
     endtask
@@ -231,13 +208,13 @@ module DecodeUnit (
             case (split.funct7)
             ARITH_REG_ADD: r_instruction(INST_ADD);
             ARITH_REG_SUB: r_instruction(INST_SUB);
-            default:       `ERROR_BAD_FUNCT7()
+            default:       error();
             endcase
         OP_REG_SOME_SHIFT_R: 
             case (split.funct7)
             SHIFT_R_LOGIC: r_instruction(INST_SRL);
             SHIFT_R_ARITH: r_instruction(INST_SRA);
-            default:       `ERROR_BAD_FUNCT7()
+            default:       error();
             endcase
         endcase
     end
@@ -297,7 +274,7 @@ module DecodeUnit (
         if (split.funct7 == 0)
             r_instruction(inst);
         else 
-            `ERROR_BAD_FUNCT7() 
+            error(); 
     end
     endtask
 
@@ -366,10 +343,8 @@ module DecodeUnit (
     task error;
     begin
         valid <= 0;
+        `LOG(("Invalid instruction, signalling error"));
     end
     endtask
-
-    // assign to_fetch.ready = to_execute.ready;
-    // assign to_execute.valid = to_fetch.valid;
 endmodule
 
