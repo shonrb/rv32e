@@ -31,42 +31,44 @@ module SkidBuffer #(type T, string NAME) (
         end else begin
             case (state) 
             ACTIVE: begin 
-                `LOG(("(%s) skid buffer is active", NAME));
+                `LOG(("(%s) Skid buffer is active...", NAME));
                 if (down.ready) begin
                     // Pass the data down
                     down.data <= up.data;
                     down.valid <= up.valid;
                     up.ready <= 1;
                     if (up.valid)
-                        `LOG(("(%s) passing value to downstream", NAME));
+                        `LOG(("(%s) ...passing value to downstream", NAME));
                     else 
-                        `LOG(("(%s) Downstream ready but upstream is not", NAME));
+                        `LOG(("(%s) ...downstream ready but upstream is not", NAME));
                 end else if (up.valid) begin
                     // We have data from upstream, but downstream 
                     // isn't ready for it. Store the data and stall.
                     `LOG((
-                        "(%s) %s, %s", 
+                        "(%s) ...%s, %s", 
                         NAME,
-                        "Upstream ready but downstream is not, ",
-                        "Buffering value and stalling"
+                        "upstream ready but downstream is not",
+                        "buffering value and stalling"
                     ));
                     up.ready <= 0;
                     down.valid <= 0;
                     buffer <= up.data;
                     state <= STALLED;
+                end else begin
+                    `LOG(("(%s) ...neither side is ready", NAME));
                 end
             end
             STALLED: begin
                 `LOG(("(%s) skid buffer is stalled with value...", NAME));
-                `LOG(("...%p",  buffer));
+                `LOG(("(%s) ...%p", NAME, buffer));
                 if (down.ready) begin
                     // Down is ready again, pass the 
                     // buffered data and resume.
                     `LOG((
-                        "(%s) %s, %s", 
+                        "(%s) ...%s, %s", 
                         NAME,
-                        "Downstream became ready, ",
-                        "Passing buffered value and ending stall"
+                        "downstream became ready",
+                        "passing buffered value and ending stall"
                     ));
                     down.data <= buffer;
                     down.valid <= 1;

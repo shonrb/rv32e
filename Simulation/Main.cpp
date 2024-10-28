@@ -14,9 +14,15 @@ int main(int argc, const char **argv)
     auto sim = MainDesign(context);
     sim.set_logging(true);
 
-    sim.write_word(0, 1111); 
-    sim.write_word(4, 2222); 
-    sim.write_word(8, 3333); 
+    u32 program[] { 1111, 2222, 3333 };
+    usize program_size = 3;
+
+    std::println("Loading program: ");
+    for (usize i = 0; i < program_size; ++i) {
+        auto word = program[i];
+        sim.write_word(i * 4, word);
+        std::println("{}: {}", i, sim.disassemble(word));
+    }
 
     sim.reset();
     sim.cycle();

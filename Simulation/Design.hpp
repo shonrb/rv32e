@@ -97,6 +97,11 @@ public:
         top->__024unit->set_logging(l);
     }
 
+    std::string disassemble(u32 instruction) 
+    {
+        return top->__024unit->disassemble(instruction);
+    }
+
 
 private:
     

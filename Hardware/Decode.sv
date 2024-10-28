@@ -83,38 +83,48 @@ typedef struct {
     logic [31:0] shamt;
 } instruction_split;
 
+function instruction_split split_instruction(input [31:0] encoded);
+begin
+    instruction_split split;
+
+    split.opcode  = encoded[6:0]; 
+    split.funct7  = encoded[31:25];
+    split.rs2     = encoded[24:20];
+    split.rs1     = encoded[19:15];
+    split.funct3  = encoded[14:12];
+    split.rd      = encoded[11:7];
+
+    split.i_immediate[31:11] = {21{encoded[31]}};
+    split.i_immediate[10:0]  = encoded[30:20];
+
+    split.s_immediate[31:11] = {21{encoded[31]}};
+    split.s_immediate[10:5]  = encoded[30:25];
+    split.s_immediate[4:0]   = encoded[11:7];
+
+    split.b_immediate[31:12] = {20{encoded[31]}};
+    split.b_immediate[11]    = encoded[7];
+    split.b_immediate[10:5]  = encoded[30:25];
+    split.b_immediate[4:1]   = encoded[11:8];
+    split.b_immediate[0]     = 0;
+
+    split.u_immediate[31:12] = encoded[31:12];
+    split.u_immediate[11:0]  = 0;
+
+    split.j_immediate[31:20] = {12{encoded[31]}};
+    split.j_immediate[19:12] = encoded[19:12];
+    split.j_immediate[11]    = encoded[20];
+    split.j_immediate[10:1]  = encoded[30:21];
+    split.j_immediate[0]     = 0;
+
+    split.shamt[4:0]         = encoded[24:20];
+    split.shamt[31:5]        = 0;
+
+    return split;
+end
+endfunction
+
 module Splitter (input [31:0] encoded, output instruction_split split);
-    assign split.opcode  = encoded[6:0]; 
-    assign split.funct7  = encoded[31:25];
-    assign split.rs2     = encoded[24:20];
-    assign split.rs1     = encoded[19:15];
-    assign split.funct3  = encoded[14:12];
-    assign split.rd      = encoded[11:7];
-
-    assign split.i_immediate[31:11] = {21{encoded[31]}};
-    assign split.i_immediate[10:0]  = encoded[30:20];
-
-    assign split.s_immediate[31:11] = {21{encoded[31]}};
-    assign split.s_immediate[10:5]  = encoded[30:25];
-    assign split.s_immediate[4:0]   = encoded[11:7];
-
-    assign split.b_immediate[31:12] = {20{encoded[31]}};
-    assign split.b_immediate[11]    = encoded[7];
-    assign split.b_immediate[10:5]  = encoded[30:25];
-    assign split.b_immediate[4:1]   = encoded[11:8];
-    assign split.b_immediate[0]     = 0;
-
-    assign split.u_immediate[31:12] = encoded[31:12];
-    assign split.u_immediate[11:0]  = 0;
-
-    assign split.j_immediate[31:20] = {12{encoded[31]}};
-    assign split.j_immediate[19:12] = encoded[19:12];
-    assign split.j_immediate[11]    = encoded[20];
-    assign split.j_immediate[10:1]  = encoded[30:21];
-    assign split.j_immediate[0]     = 0;
-
-    assign split.shamt[4:0]         = encoded[24:20];
-    assign split.shamt[31:5]        = 0;
+    assign split = split_instruction(encoded);
 endmodule
 
 module DecodeUnit (
@@ -129,20 +139,25 @@ module DecodeUnit (
 
     // Error signalling
     logic valid;
+    logic has_decoded;
+    logic can_decode;
 
     // Decode only when both sides are ready and there are no unhandled errors
-    assign to_fetch.ready   = to_execute.ready && valid;
-    assign to_execute.valid = to_fetch.valid && valid;
-    logic can_decode        = to_fetch.ready && to_execute.valid;
+
+    assign to_fetch.ready   = valid && to_execute.ready;
+    assign to_execute.valid = valid && to_fetch.valid && has_decoded;
+    assign can_decode       = valid && to_fetch.valid && to_execute.ready;
 
     always @(posedge clock or negedge reset) begin
         if (!reset) begin
             `LOG(("Resetting decoder"));
             valid <= 1;
+            has_decoded <= 0;
         end else begin
             if (can_decode) begin
-                `LOG(("Decoder can proceed, decoding %s", describe_instruction(split)));
+                `LOG(("Decoder can proceed, got %s", show_instruction(split)));
                 decode(); 
+                has_decoded <= 1;
             end else begin
                 `LOG(("Decoder can not proceed..."));
                 if (!valid)
@@ -151,6 +166,7 @@ module DecodeUnit (
                     `LOG(("...because nothing was received from fetch"));
                 if (!to_execute.ready)
                     `LOG(("...because execute is busy"));
+                has_decoded <= 0;
             end
         end
     end
