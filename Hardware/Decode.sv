@@ -176,7 +176,7 @@ module DecodeUnit (
         OPCODE_LUI:           u_instruction(INST_LUI);
         OPCODE_AUIPC:         u_instruction(INST_AUIPC);
         OPCODE_JAL:           j_instruction(INST_JAL);
-        OPCODE_JALR:          j_instruction(INST_JALR);
+        OPCODE_JALR:          j_instruction(INST_JALR); // FIXME: jalr is an i-type
         OPCODE_SOME_OP_IMM:   decode_op_imm();
         OPCODE_SOME_OP_REG:   decode_op_reg();
         OPCODE_SOME_BRANCH:   decode_branch();

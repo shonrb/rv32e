@@ -1,4 +1,5 @@
 VSRC   = $(wildcard Hardware/*.sv)
+VLIB   = $(wildcard Hardware/*.svh)
 CSRC   = Simulation/Main.cpp
 CTST   = Simulation/Test.cpp
 CLIB   = $(wildcard Simulation/*.hpp)
@@ -7,10 +8,10 @@ CFLAGS = --std=c++23
 BIN    = sim
 TST    = test
 
-Build/$(BIN): $(VSRC) $(CSRC) $(CLIB)
+Build/$(BIN): $(VSRC) $(VLIB) $(CSRC) $(CLIB)
 	verilator $(VFLAGS) -CFLAGS $(CFLAGS) $(VSRC) $(CSRC) -o $(BIN)
 
-Build/$(TST): $(VSRC) $(CTST) $(CLIB)
+Build/$(TST): $(VSRC) $(VLIB) $(CTST) $(CLIB)
 	verilator $(VFLAGS) -CFLAGS $(CFLAGS) $(VSRC) $(CTST) -o $(TST)
 
 simulate: Build/$(BIN)
