@@ -9,7 +9,7 @@ function string show_lui(input instruction_split split);
 begin
     string rd;
     rd = show_reg(split.rd);
-    return $sformatf("lui %s, %0d", rd, split.u_immediate);
+    return $sformatf("lui %s, %0d", rd, split.u_immediate >> 12);
 end
 endfunction
 
@@ -17,7 +17,7 @@ function string show_auipc(input instruction_split split);
 begin
     string rd;
     rd = show_reg(split.rd);
-    return $sformatf("auipc %s, %0d", rd, split.u_immediate);
+    return $sformatf("auipc %s, %0d", rd, split.u_immediate >> 12);
 end
 endfunction
 
@@ -196,7 +196,6 @@ endfunction
 
 function string show_instruction(input instruction_split split);
 begin
-    // FIXME: lui, auipc, & jal all have faulty immediates
     case (split.opcode)
     OPCODE_LUI:           return show_lui(split);
     OPCODE_AUIPC:         return show_auipc(split);

@@ -1,22 +1,45 @@
-VSRC   = $(wildcard Hardware/*.sv)
-VLIB   = $(wildcard Hardware/*.svh)
-CSRC   = Simulation/Main.cpp
-CTST   = Simulation/Test.cpp
-CLIB   = $(wildcard Simulation/*.hpp)
-VFLAGS = --x-assign 1 --cc --exe --build --Mdir Build --top-module Top -IHardware
-CFLAGS = --std=c++23
-BIN    = sim
-TST    = test
+BUILD = Build
+BUILD_BINS = $(BUILD)/Bin
+BUILD_CODE = $(BUILD)/Code
 
-Build/$(BIN): $(VSRC) $(VLIB) $(CSRC) $(CLIB)
-	verilator $(VFLAGS) -CFLAGS $(CFLAGS) $(VSRC) $(CSRC) -o $(BIN)
+VC = verilator
+AS = riscv64-unknown-elf-as
+LD = riscv64-unknown-elf-ld
+OC = riscv64-unknown-elf-objcopy
 
-Build/$(TST): $(VSRC) $(VLIB) $(CTST) $(CLIB)
-	verilator $(VFLAGS) -CFLAGS $(CFLAGS) $(VSRC) $(CTST) -o $(TST)
+ASM_SRC = $(wildcard Code/*.asm)
+ASM_INC = $(addprefix $(BUILD_CODE)/, $(notdir $(ASM_SRC:.asm=.inc)))
 
-simulate: Build/$(BIN)
-	make && ./Build/$(BIN)
+SV_SRC = $(wildcard Hardware/*.sv)
+SV_LIB = $(wildcard Hardware/*.svh)
+SV_FLAGS = --cc --exe --build --Mdir Build 
+SV_FLAGS += --top-module Top -IHardware
 
-test: Build/$(TST)
-	make && ./Build/$(TST)
+CXX_SRC = $(wildcard Simulation/*.cpp)
+CXX_BIN = $(addprefix $(BUILD_BINS)/, $(notdir $(CXX_SRC:.cpp=)))
+CXX_LIB = $(wildcard Simulation/*.hpp) $(ASM_INC)
+CXX_FLAGS = --std=c++23
+
+# Program include files
+$(BUILD_CODE)/%.inc: Code/%.asm
+	$(eval TMP := Build/$(notdir $<))
+	mkdir -p ./Build/Code
+	riscv64-unknown-elf-as -march=rv32e -mno-relax -mno-arch-attr $< -o $(TMP).o
+	riscv64-unknown-elf-ld -melf32lriscv $(TMP).o -o $(TMP).elf
+	riscv64-unknown-elf-objcopy -O binary $(TMP).elf $(TMP).bin
+	hexdump -v -e '1/4 "0x%08x, "' $(TMP).bin > $@
+
+# Verilated models
+$(BUILD_BINS)/%: Simulation/%.cpp $(CXX_LIB) $(SV_SRC) $(SV_LIB)	
+	mkdir -p ./Build/Bin
+	verilator $(SV_FLAGS) -CFLAGS $(CXX_FLAGS) $(SV_SRC) $< -o Bin/$(notdir $@)
+
+all: $(CXX_BIN)
+
+simulate: $(BUILD_BINS)/Main
+	./$<
+
+test: $(BUILD_BINS)/Test
+	./$<
+
 

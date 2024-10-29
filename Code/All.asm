@@ -3,8 +3,10 @@ _start:
 
 lui x0, 111
 auipc x1, 222
-jal x2, 444
+jal x2, label
 jalr x3, x4, 888
+
+label: 
 
 addi x0, x1, 111
 slti x1, x2, 222
