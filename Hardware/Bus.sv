@@ -55,7 +55,7 @@ interface bus_slv_out;
 endinterface
 
 interface bus_master;
-    transfer_kind trans;
+    logic start;
     logic available;
     logic write;
     logic [31:0] address;
@@ -65,12 +65,12 @@ interface bus_master;
     logic ready;
 
     modport in (
-        input write, address, write_data, trans,
+        input write, address, write_data, start,
         output read_data, response, ready, available
     );
 
     modport out (
-        output write, address, write_data, trans,
+        output write, address, write_data, start,
         input read_data, response, ready, available
     );
 endinterface
@@ -119,18 +119,20 @@ module BusController (
         .resp(bus.response)
     );
 
+    transfer_kind trans;
+    assign trans = bus.start ? BUS_TRANSFER_NONSEQ : BUS_TRANSFER_IDLE;
+    assign bus.available = trans == BUS_TRANSFER_IDLE;
+
     // TODO: Locked transfers, Sized transfers, bursts(?), protection(??)
     assign slv_in.ready    = bus.ready;
     assign slv_in.addr     = bus.address;
     assign slv_in.write    = bus.write;
-    assign slv_in.trans    = bus.trans;
+    assign slv_in.trans    = trans;
     assign slv_in.size     = HSIZE_32;
     assign slv_in.burst    = SINGLE;
     assign slv_in.prot     = '{0, 0, 1, 1};
     assign slv_in.mastlock = 0;
     assign slv_in.wdata    = bus.write_data;
-
-    assign bus.available = bus.trans == BUS_TRANSFER_IDLE;
 
     // Ensure memory map is ordered
     generate 

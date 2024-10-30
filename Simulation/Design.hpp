@@ -35,7 +35,6 @@ public:
     , top(new VTop{context.get()})
     , devices(init_devices())
     {
-        
         top->reset = 1;
         top->clock = 0;
         top->eval();
@@ -104,7 +103,6 @@ public:
 
 
 private:
-    
     template<typename ...Ts>
     void log(std::format_string<Ts...> fmt, Ts &&...args)
     {

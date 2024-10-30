@@ -27,7 +27,7 @@ module FetchUnit (
                     `LOG(("...Starting fetch at address (%d)", pc));
                     bus.address <= pc;
                     bus.write <= 0;
-                    bus.trans <= BUS_TRANSFER_NONSEQ;
+                    bus.start <= 1;
                     state <= WAITING;
                     increment <= 1;
                 end else if (!bus.available) begin
@@ -48,7 +48,7 @@ module FetchUnit (
                         to_decode.valid <= 0;
                     end else begin 
                         `LOG(("...Bus replied with (%d)", bus.read_data));
-                        bus.trans <= BUS_TRANSFER_IDLE;
+                        bus.start <= 0;
                         to_decode.valid <= 1;
                         to_decode.data <= bus.read_data;
                         state <= IDLE;
