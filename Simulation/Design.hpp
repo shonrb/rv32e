@@ -67,8 +67,10 @@ public:
     void cycle() 
     {
         log("Doing clock cycle {}", ++cycle_count);
+        log("Positive edge");
         top->clock = 1;
         top->eval();
+        log("Negative edge");
         top->clock = 0;
         top->eval();
         eval_devices();

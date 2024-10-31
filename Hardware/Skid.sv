@@ -22,7 +22,7 @@ module SkidBuffer #(type T, string NAME) (
 
     T buffer;
 
-    always @(posedge clock or negedge reset) begin
+    always @(negedge clock or negedge reset) begin
         if (!reset) begin
             `LOG(("(%s) Resetting skid buffer", NAME));
             state <= ACTIVE;

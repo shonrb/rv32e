@@ -35,7 +35,7 @@ module RegisterFile (
     assign execute.read_data_1 = x[decode.read_loc_1];
     assign execute.read_data_2 = x[decode.read_loc_2];
 
-    always @(posedge clock or negedge reset) begin
+    always @(negedge clock or negedge reset) begin
         if (!reset) begin
             x <= '{default:0};
         end else begin

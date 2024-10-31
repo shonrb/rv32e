@@ -162,11 +162,8 @@ void test_lui(MainDesign &sim, TestContext &test)
     sim.reset();
     sim.cycle(); // begin transfer
     sim.cycle(); // Should have a reply
-    sim.cycle(); // Pass to decode
     sim.cycle(); // Begin decode
-    sim.cycle(); // Pass to execute
-    sim.cycle(); // Done
-    sim.cycle(); // Done
+    sim.cycle(); // execute
     test.test_assert_eq(value, sim.read_register<1>());
 }
 
