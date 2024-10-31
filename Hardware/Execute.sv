@@ -13,25 +13,25 @@ endinterface
 
 module ExecuteUnit (
     input clock, 
-    input reset, 
-    skid_buffer_port.upstream to_decode,
-    reg_access_execute.out registers,
-    bus_master.out bus,
-    execute_port.back to_cu
+    input nreset, 
+    skid_buffer_port.upstream decoder,
+    reg_access_executor.front register_file,
+    bus_master.front bus,
+    execute_port.back control_unit
 );
     decoded inst;
-    assign inst = to_decode.data;
+    assign inst = decoder.data;
 
     execute_state state;
-    assign to_decode.ready = state == EXECUTE_IDLE;
+    assign decoder.ready = state == EXECUTE_IDLE;
 
-    assign registers.write_loc = inst.destination;
+    assign register_file.write_loc = inst.destination;
 
-    always @(posedge clock or negedge reset) begin
-        if (!reset) begin
+    always_ff @(posedge clock or negedge nreset) begin
+        if (!nreset) begin
             `LOG(("Resetting execute unit"));
         end else begin
-            if (to_decode.valid) begin
+            if (decoder.valid) begin
                 `LOG(("Got a decoded instruction"));
                 execute();
             end else begin
@@ -43,12 +43,12 @@ module ExecuteUnit (
     task execute;
         case (inst.instruction)
         INST_LUI: begin
-            registers.do_write <= 1;
-            registers.write_data <= inst.immediate;
+            register_file.do_write <= 1;
+            register_file.write_data <= inst.immediate;
         end
         INST_AUIPC: begin
-            registers.do_write <= 1;
-            registers.write_data <= to_cu.pc + inst.immediate;
+            register_file.do_write <= 1;
+            register_file.write_data <= control_unit.pc + inst.immediate;
         end
         INST_JAL,
         INST_JALR,
@@ -86,7 +86,7 @@ module ExecuteUnit (
         INST_SH,
         INST_SW, 
         INST_NOP: begin 
-           registers.do_write <= 0; 
+           register_file.do_write <= 0; 
         end
         endcase 
     endtask

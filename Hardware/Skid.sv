@@ -11,7 +11,7 @@ endinterface
 
 module SkidBuffer #(type T, string NAME) (
     input clock, 
-    input reset,
+    input nreset,
     skid_buffer_port.upstream   up,
     skid_buffer_port.downstream down
 );
@@ -22,8 +22,8 @@ module SkidBuffer #(type T, string NAME) (
 
     T buffer;
 
-    always @(negedge clock or negedge reset) begin
-        if (!reset) begin
+    always_ff @(negedge clock or negedge nreset) begin
+        if (!nreset) begin
             `LOG(("(%s) Resetting skid buffer", NAME));
             state <= ACTIVE;
             down.valid <= 0;

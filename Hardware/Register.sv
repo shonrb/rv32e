@@ -1,12 +1,12 @@
-interface reg_access_decode;
+interface reg_access_decoder;
     logic [3:0] read_loc_1;
     logic [3:0] read_loc_2;
 
-    modport file (input  read_loc_1, read_loc_2);
-    modport out  (output read_loc_1, read_loc_2);
+    modport back  (input  read_loc_1, read_loc_2);
+    modport front (output read_loc_1, read_loc_2);
 endinterface
 
-interface reg_access_execute;
+interface reg_access_executor;
     logic [31:0] read_data_1;
     logic [31:0] read_data_2;
 
@@ -14,11 +14,11 @@ interface reg_access_execute;
     logic [31:0] write_data;
     logic do_write;
     
-    modport file (
+    modport back (
         input  write_data, write_loc, do_write, 
         output read_data_1, read_data_2
     );
-    modport out (
+    modport front (
         output write_data, write_loc, do_write, 
         input  read_data_1, read_data_2
     );
@@ -26,31 +26,31 @@ endinterface
 
 module RegisterFile (
     input clock, 
-    input reset, 
-    reg_access_decode.file decode,
-    reg_access_execute.file execute
+    input nreset, 
+    reg_access_decoder.back decoder,
+    reg_access_executor.back executor
 );
     logic [31:0] x[16];
 
-    assign execute.read_data_1 = x[decode.read_loc_1];
-    assign execute.read_data_2 = x[decode.read_loc_2];
+    assign executor.read_data_1 = x[decoder.read_loc_1];
+    assign executor.read_data_2 = x[decoder.read_loc_2];
 
-    always @(negedge clock or negedge reset) begin
-        if (!reset) begin
+    always_ff @(negedge clock or negedge nreset) begin
+        if (!nreset) begin
             x <= '{default:0};
         end else begin
-            if (execute.do_write) begin
-                x[execute.write_loc] <= execute.write_data;
+            if (executor.do_write) begin
+                x[executor.write_loc] <= executor.write_data;
                 `LOG((
                     "Wrote (%d) to x%0d", 
-                    execute.write_data, 
-                    execute.write_loc
+                    executor.write_data, 
+                    executor.write_loc
                 ));
             end
             `LOG((
                 "Reading from x%0d and x%0d", 
-                decode.read_loc_1, 
-                decode.read_loc_2
+                decoder.read_loc_1, 
+                decoder.read_loc_2
             ));
         end
     end

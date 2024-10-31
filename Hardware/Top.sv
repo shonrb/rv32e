@@ -12,7 +12,7 @@ parameter [31:0] AHB_ADDR_MAP[AHB_DEVICE_COUNT-1] /* verilator public */ = '{
 
 module Top (
     input clock,
-    input reset,
+    input nreset,
     output wire                ext_write,
     output wire [31:0]         ext_addr,
     output transfer_size       ext_size,
@@ -53,13 +53,13 @@ module Top (
 
     ControlUnit cu (
         .clock(clock),
-        .reset(reset),
+        .nreset(nreset),
         .bus(master)
     );
 
     BusController bus_control(
         .clk(clock),
-        .rst(reset),
+        .rst(nreset),
         .bus(master),
         .sel(sel),
         .slv_in(conn_in),

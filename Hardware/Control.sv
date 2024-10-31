@@ -49,66 +49,64 @@ typedef struct {
 
 module ControlUnit (
     input clock,
-    input reset,
-    bus_master.out bus
+    input nreset,
+    bus_master.front bus
 );
     logic [31:0] pc;
 
     logic increment;
 
-    reg_access_decode decode_to_reg();
-    reg_access_execute execute_to_reg();
-
+    reg_access_decoder decode_to_reg();
+    reg_access_executor execute_to_reg();
     RegisterFile register_file(
         .clock(clock), 
-        .reset(reset),
-        .decode(decode_to_reg),
-        .execute(execute_to_reg)
+        .nreset(nreset),
+        .decoder(decode_to_reg),
+        .executor(execute_to_reg)
     );
 
     skid_buffer_port #(.T(logic[31:0])) fetch_out(); 
     skid_buffer_port #(.T(logic[31:0])) decode_in(); 
     SkidBuffer       #(.T(logic[31:0]), .NAME("fetch->decode")) fetch_to_decode(
-        .clock(clock), .reset(reset), .up(fetch_out), .down(decode_in)
+        .clock(clock), .nreset(nreset), .up(fetch_out), .down(decode_in)
     );
 
     skid_buffer_port #(.T(decoded)) decode_out(); 
     skid_buffer_port #(.T(decoded)) execute_in(); 
     SkidBuffer       #(.T(decoded), .NAME("decode->execute")) decode_to_execute(
-        .clock(clock), .reset(reset), .up(decode_out), .down(execute_in)
+        .clock(clock), .nreset(nreset), .up(decode_out), .down(execute_in)
     );
-
-    execute_port cu_to_execute();
-    assign cu_to_execute.pc = pc;
 
     FetchUnit fetch(
         .clock(clock),
-        .reset(reset),
+        .nreset(nreset),
         .pc(pc),
         .increment(increment),
         .bus(bus),
-        .to_decode(fetch_out)
+        .decoder(fetch_out)
     );
 
     DecodeUnit decode(
         .clock(clock),
-        .reset(reset),
-        .to_fetch(decode_in),
-        .to_execute(decode_out),
-        .registers(decode_to_reg)
+        .nreset(nreset),
+        .fetcher(decode_in),
+        .executor(decode_out),
+        .register_file(decode_to_reg)
     );
 
+    execute_port cu_to_execute();
+    assign cu_to_execute.pc = pc;
     ExecuteUnit execute(
         .clock(clock),
-        .reset(reset),
-        .to_decode(execute_in),
-        .registers(execute_to_reg),
+        .nreset(nreset),
+        .decoder(execute_in),
+        .register_file(execute_to_reg),
         .bus(bus),
-        .to_cu(cu_to_execute)
+        .control_unit(cu_to_execute)
     );
 
-    always @(posedge clock or negedge reset) begin
-        if (!reset) begin
+    always_ff @(posedge clock or negedge nreset) begin
+        if (!nreset) begin
             `LOG(("Resetting control unit"));
             pc <= 0;
         end else begin

@@ -37,7 +37,7 @@ public:
     , top(new VTop{context.get()})
     , devices(init_devices())
     {
-        top->reset = 1;
+        top->nreset = 1;
         top->clock = 0;
         top->eval();
     }
@@ -79,9 +79,9 @@ public:
     void reset()
     {
         log("Resetting core");
-        top->reset = 0;
+        top->nreset = 0;
         cycle();
-        top->reset = 1;
+        top->nreset = 1;
     }
 
     void write_word(u32 addr, u32 value)

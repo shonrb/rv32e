@@ -2,19 +2,19 @@
 
 module FetchUnit (
     input clock, 
-    input reset, 
+    input nreset, 
     input [31:0] pc,
     output logic increment,
-    bus_master.out bus,
-    skid_buffer_port.downstream to_decode
+    bus_master.front bus,
+    skid_buffer_port.downstream decoder
 );
     enum {
         IDLE, 
         WAITING
     } state;
 
-    always @(posedge clock or negedge reset) begin
-        if (!reset) begin
+    always_ff @(posedge clock or negedge nreset) begin
+        if (!nreset) begin
             `LOG(("Resetting fetch"));
             state <= IDLE;
         end else begin
@@ -23,7 +23,7 @@ module FetchUnit (
             case (state)
             IDLE: begin 
                 `LOG(("No fetch in progress..."));
-                if (bus.available && bus.ready && to_decode.ready) begin
+                if (bus.available && bus.ready && decoder.ready) begin
                     `LOG(("...Starting fetch at address (%d)", pc));
                     bus.address <= pc;
                     bus.write <= 0;
@@ -45,12 +45,12 @@ module FetchUnit (
                     `LOG(("...Got a reply from bus..."));
                     if (bus.response == RESP_ERROR) begin
                         `LOG(("...Bus responded with error"));
-                        to_decode.valid <= 0;
+                        decoder.valid <= 0;
                     end else begin 
                         `LOG(("...Bus replied with (%d)", bus.read_data));
                         bus.start <= 0;
-                        to_decode.valid <= 1;
-                        to_decode.data <= bus.read_data;
+                        decoder.valid <= 1;
+                        decoder.data <= bus.read_data;
                         state <= IDLE;
                     end
                 end else begin

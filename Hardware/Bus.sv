@@ -64,12 +64,12 @@ interface bus_master;
     transfer_response response;
     logic ready;
 
-    modport in (
+    modport back (
         input write, address, write_data, start,
         output read_data, response, ready, available
     );
 
-    modport out (
+    modport front (
         output write, address, write_data, start,
         input read_data, response, ready, available
     );
@@ -104,7 +104,7 @@ module BusController (
     input clk,
     input rst,
     // Front facing
-    bus_master.in bus,
+    bus_master.back bus,
     // Slaves
     output logic [AHB_DEVICE_COUNT-1:0] sel,
     output bus_slv_in slv_in,
@@ -145,7 +145,7 @@ module BusController (
         end
     endgenerate
 
-    always @(posedge clk or negedge rst) begin
+    always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
             `LOG(("Resetting bus controller"));
             sel <= 1;

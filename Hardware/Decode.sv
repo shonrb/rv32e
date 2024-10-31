@@ -1,4 +1,3 @@
-
 typedef enum [6:0] {
     OPCODE_LUI           = 'b0110111,
     OPCODE_AUIPC         = 'b0010111,
@@ -129,14 +128,14 @@ endmodule
 
 module DecodeUnit (
     input clock,
-    input reset,
-    skid_buffer_port.upstream to_fetch, 
-    skid_buffer_port.downstream to_execute,
-    reg_access_decode.out registers
+    input nreset,
+    skid_buffer_port.upstream fetcher, 
+    skid_buffer_port.downstream executor,
+    reg_access_decoder.front register_file
 );
     // Individual signal parts
     instruction_split split;
-    Splitter splitter(.encoded(to_fetch.data), .split(split));
+    Splitter splitter(.encoded(fetcher.data), .split(split));
 
     // Error signalling
     logic valid;
@@ -145,12 +144,12 @@ module DecodeUnit (
 
     // Decode only when both sides are ready and there are no unhandled errors
 
-    assign to_fetch.ready   = valid && to_execute.ready;
-    assign to_execute.valid = valid && to_fetch.valid && has_decoded;
-    assign can_decode       = valid && to_fetch.valid && to_execute.ready;
+    assign fetcher.ready   = valid && executor.ready;
+    assign executor.valid = valid && fetcher.valid && has_decoded;
+    assign can_decode       = valid && fetcher.valid && executor.ready;
 
-    always @(posedge clock or negedge reset) begin
-        if (!reset) begin
+    always @(posedge clock or negedge nreset) begin
+        if (!nreset) begin
             `LOG(("Resetting decoder"));
             valid <= 1;
             has_decoded <= 0;
@@ -163,9 +162,9 @@ module DecodeUnit (
                 `LOG(("Decoder can not proceed..."));
                 if (!valid)
                     `LOG(("...because of unhandled errors"));
-                if (!to_fetch.valid)
+                if (!fetcher.valid)
                     `LOG(("...because nothing was received from fetch"));
-                if (!to_execute.ready)
+                if (!executor.ready)
                     `LOG(("...because execute is busy"));
                 has_decoded <= 0;
             end
@@ -271,12 +270,12 @@ module DecodeUnit (
 
     // Instruction formats
     task no_op;
-        to_execute.data.instruction <= INST_NOP;
+        executor.data.instruction <= INST_NOP;
     endtask
     
     task r_instruction(input instruction_kind inst);
     begin
-        to_execute.data.instruction <= inst;
+        executor.data.instruction <= inst;
         set_rd();
         set_rs1();
         set_rs2();
@@ -318,8 +317,8 @@ module DecodeUnit (
 
     task immediate_with_rd_rs1(input instruction_kind inst, input [31:0] imm);
     begin
-        to_execute.data.instruction <= inst;
-        to_execute.data.immediate   <= imm;
+        executor.data.instruction <= inst;
+        executor.data.immediate   <= imm;
         set_rd();
         set_rs1();
     end
@@ -327,8 +326,8 @@ module DecodeUnit (
 
     task immediate_with_rs1_rs2(input instruction_kind inst, input [31:0] imm);
     begin
-        to_execute.data.instruction <= inst;
-        to_execute.data.immediate   <= imm;
+        executor.data.instruction <= inst;
+        executor.data.immediate   <= imm;
         set_rs1();
         set_rs2();
     end
@@ -336,8 +335,8 @@ module DecodeUnit (
 
     task immediate_with_rd(input instruction_kind inst, input [31:0] imm);
     begin
-        to_execute.data.instruction <= inst;
-        to_execute.data.immediate   <= imm;
+        executor.data.instruction <= inst;
+        executor.data.immediate   <= imm;
         set_rd();
     end
     endtask
@@ -351,15 +350,15 @@ module DecodeUnit (
             OUT <= IN[3:0]; 
         
     task set_rs1();
-        `SET_REG(split.rs1, registers.read_loc_1);
+        `SET_REG(split.rs1, register_file.read_loc_1);
     endtask
 
     task set_rs2();
-        `SET_REG(split.rs2, registers.read_loc_2);
+        `SET_REG(split.rs2, register_file.read_loc_2);
     endtask
 
     task set_rd();
-        `SET_REG(split.rd, to_execute.data.destination);
+        `SET_REG(split.rd, executor.data.destination);
     endtask
 
     task error;
