@@ -1,6 +1,10 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNDRIVEN */
 
+// TODO: Reduce clock cycles by doing some work on negative edges
+// TODO: Error signal for malformed instructions from executor rather
+//       than decoder
+
 // Global parameters
 parameter AHB_DEVICE_COUNT /* verilator public */ = 2;
 parameter [31:0] AHB_ADDR_MAP[AHB_DEVICE_COUNT-1] /* verilator public */ = '{
@@ -64,14 +68,17 @@ module Top (
     );
 
     // Allow the simulation to access specific internal signals
-    `define EXPOSE_SIGNAL(VALUE, NAME, TYPE) \
-        function TYPE NAME;                  \
-            /* verilator public */           \
-            begin                            \
-                NAME = VALUE;                \
-            end                              \
+    `define EXPOSE_SIGNAL(ARGS, VALUE, NAME, TYPE) \
+        function TYPE NAME ARGS;                   \
+            /* verilator public */                 \
+            begin                                  \
+                NAME = VALUE;                      \
+            end                                    \
         endfunction                         
     
-    `EXPOSE_SIGNAL(cu.fetch_out.data, sig_instruction, bit[31:0]);
+    `EXPOSE_SIGNAL((), cu.fetch_out.data, sig_instruction, bit[31:0]);
+    `EXPOSE_SIGNAL(
+        (input [3:0] i), cu.register_file.x[i], sig_register, bit[31:0]
+    );
 endmodule
 

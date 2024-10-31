@@ -44,9 +44,7 @@ typedef enum {
 typedef struct {
     instruction_kind instruction;
     logic [31:0] immediate;
-    logic [4:0] operand_1;
-    logic [4:0] operand_2;
-    logic [4:0] destination;
+    logic [3:0] destination;
 } decoded;
 
 module ControlUnit (
@@ -54,10 +52,19 @@ module ControlUnit (
     input reset,
     bus_master.out bus
 );
-    logic [31:0] x [16];
     logic [31:0] pc;
 
     logic increment;
+
+    reg_access_decode decode_to_reg();
+    reg_access_execute execute_to_reg();
+
+    RegisterFile register_file(
+        .clock(clock), 
+        .reset(reset),
+        .decode(decode_to_reg),
+        .execute(execute_to_reg)
+    );
 
     skid_buffer_port #(.T(logic[31:0])) fetch_out(); 
     skid_buffer_port #(.T(logic[31:0])) decode_in(); 
@@ -84,20 +91,21 @@ module ControlUnit (
         .clock(clock),
         .reset(reset),
         .to_fetch(decode_in),
-        .to_execute(decode_out)
+        .to_execute(decode_out),
+        .registers(decode_to_reg)
     );
 
     ExecuteUnit execute(
         .clock(clock),
         .reset(reset),
         .to_decode(execute_in),
+        .registers(execute_to_reg),
         .bus(bus)
     );
 
     always @(posedge clock or negedge reset) begin
         if (!reset) begin
             `LOG(("Resetting control unit"));
-            x <= '{default: 0};
             pc <= 0;
         end else begin
             if (increment) begin

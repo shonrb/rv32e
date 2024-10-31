@@ -4,7 +4,7 @@
 #include "Design.hpp"
 
 #include <print>
-#include <optional>
+#include <random>
 
 template<typename ...Ts>
 void print_coloured(bool success, std::format_string<Ts...> fmt, Ts &&...args)
@@ -25,28 +25,36 @@ concept TestFunction = requires (T t, MainDesign &s, TestContext &f)
     t(s, f);
 };
 
-template<TestFunction Func>
-struct Test
-{
-    Func run_test;
-    std::string name;
-};
-
 class TestContext
 {
+    std::mt19937 prng;
+
     usize passed = 0;
     usize out_of = 0;
-    std::string test_name = "Unnamed test";
+    std::string test_name = "Untitled test";
     usize id;
 
 public:
     TestContext(usize i)
     : id(i)
+    , prng(std::random_device{}())
     {}
 
     void name(std::string s)
     {
         test_name = s;
+    }
+
+    u32 random_u32(u32 from, u32 to)
+    {
+        auto dist = std::uniform_int_distribution<u32>(from, to); 
+        return dist(prng);
+    }
+
+    u32 random_u32()
+    {
+        auto dist = std::uniform_int_distribution<u32>(); 
+        return dist(prng);
     }
 
     void test_assert(bool cond, const std::string &msg)
@@ -99,12 +107,12 @@ private:
     template<TestFunction ...Tfs>
     friend void run_tests(
         std::shared_ptr<VerilatedContext> ctx, 
-        Test<Tfs> ...tests
+        Tfs ...tests
     );
 };
 
 template<TestFunction ...Tfs>
-void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
+void run_tests(std::shared_ptr<VerilatedContext> ctx, Tfs ...tests)
 {
     usize tests_passed = 0;
     usize out_of       = sizeof...(Tfs);
@@ -113,7 +121,7 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
     ([&] {
         auto sim = MainDesign(ctx);
         auto test_ctx = TestContext(test_number);
-        tests.run_test(sim, test_ctx);
+        tests(sim, test_ctx);
 
         bool passed = test_ctx.finish();
         if (passed) {
@@ -122,14 +130,19 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Test<Tfs> ...tests)
         test_number++;
     }(), ...);
 
-    print_coloured(tests_passed == out_of, "{} tests passed out of {}", tests_passed, out_of);
+    print_coloured(
+        tests_passed == out_of, 
+        "{} tests passed out of {}", 
+        tests_passed, 
+        out_of
+    );
 }
 
 void test_fetch(MainDesign &sim, TestContext &test)
 {
     test.name("Instruction fetch working");
 
-    constexpr u32 expect = 1234321;
+    auto expect = test.random_u32();
     sim.write_word(0, expect);
     sim.reset();
     sim.cycle(); // Begin transfer
@@ -139,13 +152,32 @@ void test_fetch(MainDesign &sim, TestContext &test)
     test.test_assert_eq(expect, inst, "wrong instruction fetched");
 }
 
+void test_lui(MainDesign &sim, TestContext &test)
+{
+    test.name("LUI instruction working");
+    auto value = test.random_u32(0, 4096) << 12;
+    auto dest = 1 << 7;
+    auto inst = value | dest | Opcodes::OPCODE_LUI;
+    sim.write_word(0, inst);
+    sim.reset();
+    sim.cycle(); // begin transfer
+    sim.cycle(); // Should have a reply
+    sim.cycle(); // Pass to decode
+    sim.cycle(); // Begin decode
+    sim.cycle(); // Pass to execute
+    sim.cycle(); // Done
+    sim.cycle(); // Done
+    test.test_assert_eq(value, sim.read_register<1>());
+}
+
 int main(int argc, const char **argv)
 {
     auto context = std::make_shared<VerilatedContext>();
     context->commandArgs(argc, argv);
     run_tests(
         context,
-        Test{test_fetch, "Instruction fetch working"}
+        test_fetch, 
+        test_lui
     );
 }
 

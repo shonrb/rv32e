@@ -1,6 +1,9 @@
 .globl _start
 _start:
 
+li x4, 100
+add x1, x2, x3
+
 lui x0, 111
 auipc x1, 222
 jal x2, label

@@ -13,13 +13,14 @@ endfunction
 
 function string colour_file(input string file);
     case (file)
-    "Hardware/Control.sv" : colour_file = {8'h1b, "[31m"};
-    "Hardware/Fetch.sv"   : colour_file = {8'h1b, "[32m"};
-    "Hardware/Bus.sv"     : colour_file = {8'h1b, "[33m"};
-    "Hardware/Skid.sv"    : colour_file = {8'h1b, "[34m"};
-    "Hardware/Execute.sv" : colour_file = {8'h1b, "[35m"};
-    "Hardware/Decode.sv"  : colour_file = {8'h1b, "[36m"};
-    default               : colour_file = reset();
+    "Hardware/Control.sv"  : colour_file = {8'h1b, "[31m"};
+    "Hardware/Fetch.sv"    : colour_file = {8'h1b, "[32m"};
+    "Hardware/Bus.sv"      : colour_file = {8'h1b, "[33m"};
+    "Hardware/Skid.sv"     : colour_file = {8'h1b, "[34m"};
+    "Hardware/Execute.sv"  : colour_file = {8'h1b, "[35m"};
+    "Hardware/Decode.sv"   : colour_file = {8'h1b, "[36m"};
+    "Hardware/Register.sv" : colour_file = {8'h1b, "[91m"};
+    default                : colour_file = reset();
     endcase
 endfunction
 

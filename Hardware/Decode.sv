@@ -11,7 +11,7 @@ typedef enum [6:0] {
     OPCODE_SOME_STORE    = 'b0100011,
     OPCODE_SOME_MISC_MEM = 'b0001111,
     OPCODE_SOME_SYSTEM   = 'b1110011
-} opcode_field;
+} opcode_field /* verilator public */;
 
 typedef enum [2:0] {
     OP_IMM_ADDI         = 'b000,
@@ -131,7 +131,8 @@ module DecodeUnit (
     input clock,
     input reset,
     skid_buffer_port.upstream to_fetch, 
-    skid_buffer_port.downstream to_execute
+    skid_buffer_port.downstream to_execute,
+    reg_access_decode.out registers
 );
     // Individual signal parts
     instruction_split split;
@@ -276,21 +277,16 @@ module DecodeUnit (
     task r_instruction(input instruction_kind inst);
     begin
         to_execute.data.instruction <= inst;
-        to_execute.data.destination <= split.rd;
-        to_execute.data.operand_1   <= split.rs1;
-        to_execute.data.operand_2   <= split.rs2;
-        check_register(split.rd);
-        check_register(split.rs1);
-        check_register(split.rs2);
+        set_rd();
+        set_rs1();
+        set_rs2();
     end
     endtask
 
     task r_instruction_zeroed_funct7(input instruction_kind inst);
     begin
-        if (split.funct7 == 0)
-            r_instruction(inst);
-        else 
-            error(); 
+        if (split.funct7 == 0) r_instruction(inst);
+        else                   error(); 
     end
     endtask
 
@@ -323,37 +319,47 @@ module DecodeUnit (
     task immediate_with_rd_rs1(input instruction_kind inst, input [31:0] imm);
     begin
         to_execute.data.instruction <= inst;
-        to_execute.data.destination <= split.rd;
-        to_execute.data.operand_1   <= split.rs1;
         to_execute.data.immediate   <= imm;
-        check_register(split.rd);
-        check_register(split.rs1);
+        set_rd();
+        set_rs1();
     end
     endtask
 
     task immediate_with_rs1_rs2(input instruction_kind inst, input [31:0] imm);
     begin
         to_execute.data.instruction <= inst;
-        to_execute.data.operand_1   <= split.rs1;
-        to_execute.data.operand_2   <= split.rs2;
         to_execute.data.immediate   <= imm;
-        check_register(split.rs1);
-        check_register(split.rs2);
+        set_rs1();
+        set_rs2();
     end
     endtask
 
     task immediate_with_rd(input instruction_kind inst, input [31:0] imm);
     begin
         to_execute.data.instruction <= inst;
-        to_execute.data.destination <= split.rd;
         to_execute.data.immediate   <= imm;
-        check_register(split.rd);
+        set_rd();
     end
     endtask
 
-    task check_register(input [4:0] num);
-        if (num >= 16)
-            error();
+    // Macro to avoid blocking assignment
+    // TODO: see if there's a cleaner way to do this
+    `define SET_REG(IN, OUT) \
+        if (IN >= 16)        \
+            error();         \
+        else                 \
+            OUT <= IN[3:0]; 
+        
+    task set_rs1();
+        `SET_REG(split.rs1, registers.read_loc_1);
+    endtask
+
+    task set_rs2();
+        `SET_REG(split.rs2, registers.read_loc_2);
+    endtask
+
+    task set_rd();
+        `SET_REG(split.rd, to_execute.data.destination);
     endtask
 
     task error;

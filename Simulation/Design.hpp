@@ -15,6 +15,8 @@ constexpr auto device_count = VTop___024unit::AHB_DEVICE_COUNT;
 constexpr auto address_map  = VTop___024unit::AHB_ADDR_MAP;
 }
 
+using Opcodes = VTop___024unit::opcode_field;
+
 template<BusDevice ...Devices> 
 requires (sizeof...(Devices) == params::device_count)
 class Design
@@ -96,11 +98,16 @@ public:
         top->__024unit->set_logging(l);
     }
 
+    template<usize I>
+    u32 read_register() requires (I < 16)
+    {
+        return top->Top->sig_register(I);
+    }
+
     std::string disassemble(u32 instruction) 
     {
         return top->__024unit->disassemble(instruction);
     }
-
 
 private:
     template<typename ...Ts>
