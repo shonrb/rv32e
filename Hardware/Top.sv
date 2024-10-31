@@ -1,7 +1,6 @@
 /* verilator lint_off UNUSEDSIGNAL */
 /* verilator lint_off UNDRIVEN */
 
-// TODO: Reduce clock cycles by doing some work on negative edges
 // TODO: Error signal for malformed instructions from executor rather
 //       than decoder
 

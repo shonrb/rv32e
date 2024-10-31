@@ -78,6 +78,9 @@ module ControlUnit (
         .clock(clock), .reset(reset), .up(decode_out), .down(execute_in)
     );
 
+    execute_port cu_to_execute();
+    assign cu_to_execute.pc = pc;
+
     FetchUnit fetch(
         .clock(clock),
         .reset(reset),
@@ -100,7 +103,8 @@ module ControlUnit (
         .reset(reset),
         .to_decode(execute_in),
         .registers(execute_to_reg),
-        .bus(bus)
+        .bus(bus),
+        .to_cu(cu_to_execute)
     );
 
     always @(posedge clock or negedge reset) begin

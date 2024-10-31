@@ -2,12 +2,22 @@ typedef enum {
     EXECUTE_IDLE
 } execute_state;
 
+interface execute_port;
+    logic [31:0] pc;
+    logic set_pc;
+    logic [31:0] new_pc;
+
+    modport back  (input  pc, output set_pc, new_pc);
+    modport front (output pc, input  set_pc, new_pc);
+endinterface
+
 module ExecuteUnit (
     input clock, 
     input reset, 
     skid_buffer_port.upstream to_decode,
     reg_access_execute.out registers,
-    bus_master.out bus
+    bus_master.out bus,
+    execute_port.back to_cu
 );
     decoded inst;
     assign inst = to_decode.data;
@@ -36,7 +46,10 @@ module ExecuteUnit (
             registers.do_write <= 1;
             registers.write_data <= inst.immediate;
         end
-        INST_AUIPC,
+        INST_AUIPC: begin
+            registers.do_write <= 1;
+            registers.write_data <= to_cu.pc + inst.immediate;
+        end
         INST_JAL,
         INST_JALR,
         INST_ADDI,
