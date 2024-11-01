@@ -21,7 +21,7 @@ typedef enum [2:0] {
     OP_IMM_ANDI         = 'b111,
     OP_IMM_SLLI         = 'b001,
     OP_IMM_SOME_SHIFT_R = 'b101
-} funct3_op_imm;
+} funct3_op_imm /* verilator public */;
 
 typedef enum [2:0] {
     OP_REG_SOME_ARITH   = 'b000,
@@ -32,17 +32,17 @@ typedef enum [2:0] {
     OP_REG_SOME_SHIFT_R = 'b101,
     OP_REG_OR           = 'b110,
     OP_REG_AND          = 'b111
-} funct3_op_reg;
+} funct3_op_reg /* verilator public */;
 
 typedef enum [6:0] {
     SHIFT_R_LOGIC = 'b0000000,
     SHIFT_R_ARITH = 'b0100000
-} funct7_r_shift_kind;
+} funct7_r_shift_kind /* verilator public */;
 
 typedef enum [6:0] {
     ARITH_REG_ADD = 'b0000000,
     ARITH_REG_SUB = 'b0100000
-} funct7_reg_arith;
+} funct7_reg_arith /* verilator public */;
 
 typedef enum [2:0] {
     BRANCH_EQ                     = 'b000,
@@ -51,7 +51,7 @@ typedef enum [2:0] {
     BRANCH_GREATER_OR_EQ_SIGNED   = 'b101,
     BRANCH_LESS_THAN_UNSIGNED     = 'b110,
     BRANCH_GREATER_OR_EQ_UNSIGNED = 'b111
-} funct3_branch_kind;
+} funct3_branch /* verilator public */;
 
 typedef enum [2:0] {
     LOAD_BYTE           = 'b000,
@@ -59,13 +59,13 @@ typedef enum [2:0] {
     LOAD_WORD           = 'b010,
     LOAD_BYTE_UPPER     = 'b100,
     LOAD_HALFWORD_UPPER = 'b101
-} funct3_load;
+} funct3_load /* verilator public */;
 
 typedef enum [2:0] {
     STORE_BYTE     = 'b000,
     STORE_HALFWORD = 'b001,
     STORE_WORD     = 'b010
-} funct3_store;
+} funct3_store /* verilator public */;
 
 typedef struct {
     logic [6:0]  opcode;
@@ -135,7 +135,7 @@ module DecodeUnit (
 );
     // Individual signal parts
     instruction_split split;
-    Splitter splitter(.encoded(fetcher.data), .split(split));
+    assign split = split_instruction(fetcher.data.instruction);
 
     // Error signalling
     logic valid;
@@ -155,9 +155,14 @@ module DecodeUnit (
             has_decoded <= 0;
         end else begin
             if (can_decode) begin
-                `LOG(("Decoder can proceed, got %s", show_instruction(split)));
+                `LOG((
+                    "Decoder can proceed, got %s at 0x%h", 
+                    show_instruction(split),
+                    fetcher.data.address
+                ));
                 decode(); 
                 has_decoded <= 1;
+                executor.data.address <= fetcher.data.address;
             end else begin
                 `LOG(("Decoder can not proceed..."));
                 if (!valid)

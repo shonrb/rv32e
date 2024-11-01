@@ -42,9 +42,15 @@ typedef enum {
 } instruction_kind;
 
 typedef struct {
+    logic [31:0] instruction;
+    logic [31:0] address;
+} fetched;
+
+typedef struct {
     instruction_kind instruction;
     logic [31:0] immediate;
     logic [3:0] destination;
+    logic [31:0] address;
 } decoded;
 
 module ControlUnit (
@@ -65,9 +71,9 @@ module ControlUnit (
         .executor(execute_to_reg)
     );
 
-    skid_buffer_port #(.T(logic[31:0])) fetch_out(); 
-    skid_buffer_port #(.T(logic[31:0])) decode_in(); 
-    SkidBuffer       #(.T(logic[31:0]), .NAME("fetch->decode")) fetch_to_decode(
+    skid_buffer_port #(.T(fetched)) fetch_out(); 
+    skid_buffer_port #(.T(fetched)) decode_in(); 
+    SkidBuffer       #(.T(fetched), .NAME("fetch->decode")) fetch_to_decode(
         .clock(clock), .nreset(nreset), .up(fetch_out), .down(decode_in)
     );
 
@@ -95,7 +101,6 @@ module ControlUnit (
     );
 
     execute_port cu_to_execute();
-    assign cu_to_execute.pc = pc;
     ExecuteUnit execute(
         .clock(clock),
         .nreset(nreset),

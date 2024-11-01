@@ -138,6 +138,8 @@ void run_tests(std::shared_ptr<VerilatedContext> ctx, Tfs ...tests)
     );
 }
 
+constexpr u32 NOP = Opcodes::OPCODE_SOME_OP_IMM | (OpImmF3::OP_IMM_ADDI);
+
 void test_fetch(MainDesign &sim, TestContext &test)
 {
     test.name("Instruction fetch working");
@@ -167,6 +169,32 @@ void test_lui(MainDesign &sim, TestContext &test)
     test.test_assert_eq(value, sim.read_register<1>());
 }
 
+void test_auipc(MainDesign &sim, TestContext &test)
+{
+    test.name("AUIPC instruction working");
+    auto value = test.random_u32(0, 4096) << 12;
+    auto dest = 1 << 7;
+    auto inst = value | dest | Opcodes::OPCODE_AUIPC;
+
+    sim.write_word(0, NOP);
+    sim.write_word(4, NOP);
+    sim.write_word(8, NOP);
+    sim.write_word(12, inst);
+
+    sim.reset();
+    sim.cycle(); // begin fetch
+    sim.cycle(); // end fetch
+    sim.cycle(); // decode + begin fetch
+    sim.cycle(); // execute + end fetch
+    sim.cycle(); // decode + begin fetch
+    sim.cycle(); // execute + end fetch
+    sim.cycle(); // decode + begin fetch
+    sim.cycle(); // execute + end fetch
+    sim.cycle(); // decode + begin fetch
+    sim.cycle(); // execute + end fetch
+    test.test_assert_eq(12 + value, sim.read_register<1>());
+}
+
 int main(int argc, const char **argv)
 {
     auto context = std::make_shared<VerilatedContext>();
@@ -174,7 +202,8 @@ int main(int argc, const char **argv)
     run_tests(
         context,
         test_fetch, 
-        test_lui
+        test_lui,
+        test_auipc
     );
 }
 

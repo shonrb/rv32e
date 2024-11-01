@@ -3,12 +3,11 @@ typedef enum {
 } execute_state;
 
 interface execute_port;
-    logic [31:0] pc;
     logic set_pc;
     logic [31:0] new_pc;
 
-    modport back  (input  pc, output set_pc, new_pc);
-    modport front (output pc, input  set_pc, new_pc);
+    modport back  (output set_pc, new_pc);
+    modport front (input  set_pc, new_pc);
 endinterface
 
 module ExecuteUnit (
@@ -48,7 +47,7 @@ module ExecuteUnit (
         end
         INST_AUIPC: begin
             register_file.do_write <= 1;
-            register_file.write_data <= control_unit.pc + inst.immediate;
+            register_file.write_data <= inst.address + inst.immediate;
         end
         INST_JAL,
         INST_JALR,

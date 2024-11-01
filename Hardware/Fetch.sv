@@ -23,9 +23,11 @@ module FetchUnit (
             case (state)
             IDLE: begin 
                 `LOG(("No fetch in progress..."));
+                decoder.valid <= 0;
                 if (bus.available && bus.ready && decoder.ready) begin
                     `LOG(("...Starting fetch at address (%d)", pc));
                     bus.address <= pc;
+                    decoder.data.address <= pc;
                     bus.write <= 0;
                     bus.start <= 1;
                     state <= WAITING;
@@ -50,7 +52,7 @@ module FetchUnit (
                         `LOG(("...Bus replied with (%d)", bus.read_data));
                         bus.start <= 0;
                         decoder.valid <= 1;
-                        decoder.data <= bus.read_data;
+                        decoder.data.instruction <= bus.read_data;
                         state <= IDLE;
                     end
                 end else begin
