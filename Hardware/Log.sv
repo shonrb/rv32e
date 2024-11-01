@@ -1,4 +1,4 @@
-`include "Show.svh"
+`include "Disasm.svh"
 
 bit logging;
 
@@ -7,31 +7,29 @@ task set_logging(input bit b);
     assign logging = b;
 endtask
 
-function string reset;
-    reset = {8'h1b, "[0m"};
-endfunction
-
-function string colour_file(input string file);
-    case (file)
-    "Hardware/Control.sv"  : colour_file = {8'h1b, "[31m"};
-    "Hardware/Fetch.sv"    : colour_file = {8'h1b, "[32m"};
-    "Hardware/Bus.sv"      : colour_file = {8'h1b, "[33m"};
-    "Hardware/Skid.sv"     : colour_file = {8'h1b, "[34m"};
-    "Hardware/Execute.sv"  : colour_file = {8'h1b, "[35m"};
-    "Hardware/Decode.sv"   : colour_file = {8'h1b, "[36m"};
-    "Hardware/Register.sv" : colour_file = {8'h1b, "[91m"};
-    default                : colour_file = reset();
-    endcase
-endfunction
-
-task log_inner(input string ctx, input string str);
+task log_inner(input string file, input string str);
     if (logging) begin
-        $display("%s  (%s) %s%s", colour_file(ctx), ctx, str, reset());
+        string code, name, colour, reset;
+        case (file)
+        "Hardware/Control.sv"  : begin code = "[31m"; name = "control unit";  end
+        "Hardware/Fetch.sv"    : begin code = "[32m"; name = "fetcher";       end
+        "Hardware/Bus.sv"      : begin code = "[33m"; name = "bus";           end
+        "Hardware/Skid.sv"     : begin code = "[34m"; name = "skid buffer";   end
+        "Hardware/Execute.sv"  : begin code = "[35m"; name = "executor";      end
+        "Hardware/Decode.sv"   : begin code = "[36m"; name = "decoder";       end
+        "Hardware/Register.sv" : begin code = "[91m"; name = "register file"; end
+        default                : begin code = "[0m";  name = "?";             end
+        endcase
+
+        colour = {8'h1b, code};
+        reset  = {8'h1b, "[0m"};
+
+        $display("  %s(%s) %s%s", colour, name, str, reset);
     end
 endtask 
 
 function string disassemble(input [31:0] inst);
-/* verilator public */
+    /* verilator public */
     return show_instruction(split_instruction(inst));
 endfunction
 

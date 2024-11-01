@@ -1,49 +1,45 @@
 function string show_reg(input [4:0] reg_no);
-    show_reg 
-        = reg_no < 16 
+    return reg_no < 16 
         ? $sformatf("x%0d", reg_no)
         : $sformatf("(invalid register %0d)", reg_no);
 endfunction
 
 function string show_lui(input instruction_split split);
-begin
-    string rd;
-    rd = show_reg(split.rd);
-    return $sformatf("lui %s, %0d", rd, split.u_immediate >> 12);
-end
+    return $sformatf(
+        "lui %s, %0d", 
+        show_reg(split.rd),
+        split.u_immediate >> 12
+    );
 endfunction
 
 function string show_auipc(input instruction_split split);
-begin
-    string rd;
-    rd = show_reg(split.rd);
-    return $sformatf("auipc %s, %0d", rd, split.u_immediate >> 12);
-end
+    return $sformatf(
+        "auipc %s, %0d", 
+        show_reg(split.rd),
+        split.u_immediate >> 12
+    );
 endfunction
 
 function string show_jal(input instruction_split split);
-begin
-    string rd;
-    rd = show_reg(split.rd);
-    return $sformatf("jal %s, %0d", rd, split.j_immediate);
-end
+    return $sformatf(
+        "jal %s, %0d", 
+        show_reg(split.rd),
+        split.j_immediate
+    );
 endfunction
 
 function string show_jalr(input instruction_split split);
-begin
-    string rd, r1;
-    rd = show_reg(split.rd);
-    r1 = show_reg(split.rs1);
-    return $sformatf("jalr %s, %s, %0d", rd, r1, split.i_immediate);
-end
+    return $sformatf(
+        "jalr %s, %s, %0d", 
+        show_reg(split.rd),
+        show_reg(split.rs1),
+        split.i_immediate
+    );
 endfunction
-
 
 function string show_op_imm(input instruction_split split);
     string opcode;
     integer imm;
-    string rd; 
-    string rs; 
 
     case (split.funct3)
     OP_IMM_ADDI:  begin imm = split.i_immediate;  opcode = "addi"; end //} = {split.i_immediate, "addi" };
@@ -64,18 +60,18 @@ function string show_op_imm(input instruction_split split);
         endcase
     endcase
 
-    rd = show_reg(split.rd);
-    rs = show_reg(split.rs1);
-
-    return $sformatf("%s %s, %s, %0d", opcode, rd, rs, imm);
+    return $sformatf(
+        "%s %s, %s, %0d", 
+        opcode, 
+        show_reg(split.rd),
+        show_reg(split.rs1),
+        imm
+    );
 endfunction
 
 function string show_op_reg(input instruction_split split);
 begin
     string opcode;
-    string rd;
-    string r1;
-    string r2;    
 
     if (split.funct3 != OP_REG_SOME_ARITH 
     &&  split.funct3 != OP_REG_SOME_SHIFT_R 
@@ -112,19 +108,20 @@ begin
         endcase
     endcase
 
-    rd = show_reg(split.rd);
-    r1 = show_reg(split.rs1);
-    r2 = show_reg(split.rs2);
 
-    return $sformatf("%s %s, %s, %s", opcode, rd, r1, r2);
+    return $sformatf(
+        "%s %s, %s, %s", 
+        opcode, 
+        show_reg(split.rd),
+        show_reg(split.rs1),
+        show_reg(split.rs2),
+    );
 end
 endfunction
 
 function string show_branch(input instruction_split split);
 begin
     string opcode;
-    string r1;
-    string r2;
 
     case (split.funct3)
     BRANCH_EQ:                     opcode = "beq";
@@ -139,18 +136,19 @@ begin
     );
     endcase
 
-    r1 = show_reg(split.rs1);
-    r2 = show_reg(split.rs2);
-
-    return $sformatf("%s %s, %s, {0x%h}", opcode, r1, r2, split.b_immediate);
+    return $sformatf(
+        "%s %s, %s, %0d", 
+        opcode, 
+        show_reg(split.rs1),
+        show_reg(split.rs2),
+        split.b_immediate
+    );
 end
 endfunction
 
 function string show_load(input instruction_split split);
 begin
     string opcode;
-    string rd;
-    string r1;
 
     case (split.funct3)
     LOAD_BYTE:           opcode = "lb";
@@ -164,18 +162,12 @@ begin
     );
     endcase
 
-    rd = show_reg(split.rd);
-    r1 = show_reg(split.rs1);
-
-    return $sformatf("%s %s, %0d(%s)", opcode, rd, split.i_immediate, r1);
 end
 endfunction
 
 function string show_store(input instruction_split split);
 begin
     string opcode;
-    string r1;
-    string r2;
 
     case (split.funct3)
     STORE_BYTE:           opcode = "sb";
@@ -187,10 +179,13 @@ begin
     );
     endcase
 
-    r1 = show_reg(split.rs1);
-    r2 = show_reg(split.rs2);
-
-    return $sformatf("%s %s, %0d(%s)", opcode, r2, split.s_immediate, r1);
+    return $sformatf(
+        "%s %s, %0d(%s)", 
+        opcode, 
+        show_reg(split.rd),
+        split.s_immediate, 
+        show_reg(split.rs1)
+    );
 end
 endfunction
 
