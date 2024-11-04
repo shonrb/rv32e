@@ -14,3 +14,8 @@ using usize = size_t;
 using f32   = float;
 using f64   = double;
 
+u32 binary_ones(usize n)
+{
+    return (1 << n) - 1;
+}
+

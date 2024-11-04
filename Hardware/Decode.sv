@@ -122,16 +122,20 @@ begin
 end
 endfunction
 
-module Splitter (input [31:0] encoded, output instruction_split split);
-    assign split = split_instruction(encoded);
-endmodule
+interface decoder_port;
+    logic flush;
+    
+    modport front (output flush);
+    modport back  (output flush);
+endinterface 
 
 module DecodeUnit (
     input clock,
     input nreset,
     skid_buffer_port.upstream fetcher, 
     skid_buffer_port.downstream executor,
-    reg_access_decoder.front register_file
+    reg_access_decoder.front register_file,
+    decoder_port.back control_unit
 );
     // Individual signal parts
     instruction_split split;
@@ -144,12 +148,12 @@ module DecodeUnit (
 
     // Decode only when both sides are ready and there are no unhandled errors
 
-    assign fetcher.ready   = valid && executor.ready;
+    assign fetcher.ready  = valid && executor.ready;
     assign executor.valid = valid && fetcher.valid && has_decoded;
-    assign can_decode       = valid && fetcher.valid && executor.ready;
+    assign can_decode     = valid && fetcher.valid && executor.ready;
 
     always @(posedge clock or negedge nreset) begin
-        if (!nreset) begin
+        if (!nreset || control_unit.flush) begin
             `LOG(("Resetting decoder"));
             valid <= 1;
             has_decoded <= 0;
@@ -181,7 +185,7 @@ module DecodeUnit (
         OPCODE_LUI:           u_instruction(INST_LUI);
         OPCODE_AUIPC:         u_instruction(INST_AUIPC);
         OPCODE_JAL:           j_instruction(INST_JAL);
-        OPCODE_JALR:          j_instruction(INST_JALR); // FIXME: jalr is an i-type
+        OPCODE_JALR:          i_instruction(INST_JALR); 
         OPCODE_SOME_OP_IMM:   decode_op_imm();
         OPCODE_SOME_OP_REG:   decode_op_reg();
         OPCODE_SOME_BRANCH:   decode_branch();

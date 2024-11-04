@@ -40,12 +40,19 @@ module RegisterFile (
             x <= '{default:0};
         end else begin
             if (executor.do_write) begin
-                x[executor.write_loc] <= executor.write_data;
-                `LOG((
-                    "Wrote (%d) to x%0d", 
-                    executor.write_data, 
-                    executor.write_loc
-                ));
+                if (executor.write_loc == 0) begin
+                    `LOG((
+                        "Tried to write (%d) to x0", 
+                        executor.write_data, 
+                    ));
+                end else begin
+                    x[executor.write_loc] <= executor.write_data;
+                    `LOG((
+                        "Wrote (%d) to x%0d", 
+                        executor.write_data, 
+                        executor.write_loc
+                    ));
+                end
             end
             `LOG((
                 "Reading from x%0d and x%0d", 

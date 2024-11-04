@@ -79,6 +79,9 @@ module Top (
         (), cu.fetch_out.data.instruction, sig_instruction, bit[31:0]
     );
     `EXPOSE_SIGNAL(
+        (), cu.pc, sig_pc, bit[31:0]
+    );
+    `EXPOSE_SIGNAL(
         (input [3:0] i), cu.register_file.x[i], sig_register, bit[31:0]
     );
 endmodule

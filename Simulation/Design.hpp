@@ -2,6 +2,7 @@
 #include <optional>
 #include <functional>
 #include <ranges>
+#include <iterator>
 
 #include "verilated.h"
 #include "VTop__Dpi.h"
@@ -80,7 +81,15 @@ public:
         log("Negative edge");
         top->clock = 0;
         top->eval();
+        log("Evaluating devices");
         eval_devices();
+    }
+
+    void do_cycles(usize count)
+    {
+        while (count--) {
+            cycle();
+        }
     }
 
     void reset()
@@ -96,9 +105,19 @@ public:
         mux_devices(addr)->write(addr, value);
     }
 
-    u32 read_instruction() const
+    template<typename T>
+    requires std::ranges::range<T> 
+    && std::is_same_v<std::ranges::range_value_t<T>, u32>
+    void write_words(u32 addr, T vals) 
     {
-        return top->Top->sig_instruction();
+        for (auto [i, v] : std::ranges::views::enumerate(vals)) {
+            write_word(addr + i * 4, v);
+        }
+    }
+
+    std::string disassemble(u32 instruction) 
+    {
+        return top->__024unit->disassemble(instruction);
     }
 
     void set_logging(bool l)
@@ -113,9 +132,14 @@ public:
         return top->Top->sig_register(I);
     }
 
-    std::string disassemble(u32 instruction) 
+    u32 read_instruction() const
     {
-        return top->__024unit->disassemble(instruction);
+        return top->Top->sig_instruction();
+    }
+
+    u32 read_program_counter() const
+    {
+        return top->Top->sig_pc();
     }
 
 private:

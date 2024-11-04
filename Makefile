@@ -27,7 +27,7 @@ $(BUILD_CODE)/%.inc: Code/%.asm
 	riscv64-unknown-elf-as -march=rv32e -mno-relax -mno-arch-attr $< -o $(TMP).o
 	riscv64-unknown-elf-ld -melf32lriscv $(TMP).o -o $(TMP).elf
 	riscv64-unknown-elf-objcopy -O binary $(TMP).elf $(TMP).bin
-	hexdump -v -e '1/4 "0x%08x, "' $(TMP).bin > $@
+	hexdump -v -e '1/4 "0x%08xu, "' $(TMP).bin > $@
 
 # Verilated models
 $(BUILD_BINS)/%: Simulation/%.cpp $(CXX_LIB) $(SV_SRC) $(SV_LIB)	

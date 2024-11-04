@@ -19,12 +19,11 @@ int main(int argc, const char **argv)
     sim.set_logging(true);
 
     std::println("Loading program: ");
-    for (usize i = 0; i < prog.size(); ++i) {
-        auto word = prog[i];
-        sim.write_word(i * 4, word);
-        std::println("{}: {}", i, sim.disassemble(word));
-    }
+    sim.write_words(0, prog);
     sim.reset();
+    sim.cycle();
+    sim.cycle();
+    sim.cycle();
     sim.cycle();
     sim.cycle();
     sim.cycle();

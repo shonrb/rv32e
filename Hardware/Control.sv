@@ -59,8 +59,7 @@ module ControlUnit (
     bus_master.front bus
 );
     logic [31:0] pc;
-
-    logic increment;
+    logic flush;
 
     reg_access_decoder decode_to_reg();
     reg_access_executor execute_to_reg();
@@ -74,33 +73,36 @@ module ControlUnit (
     skid_buffer_port #(.T(fetched)) fetch_out(); 
     skid_buffer_port #(.T(fetched)) decode_in(); 
     SkidBuffer       #(.T(fetched), .NAME("fetch->decode")) fetch_to_decode(
-        .clock(clock), .nreset(nreset), .up(fetch_out), .down(decode_in)
+        .clock(clock), .nreset(nreset), .flush(flush), .up(fetch_out), .down(decode_in)
     );
 
     skid_buffer_port #(.T(decoded)) decode_out(); 
     skid_buffer_port #(.T(decoded)) execute_in(); 
     SkidBuffer       #(.T(decoded), .NAME("decode->execute")) decode_to_execute(
-        .clock(clock), .nreset(nreset), .up(decode_out), .down(execute_in)
+        .clock(clock), .nreset(nreset), .flush(flush), .up(decode_out), .down(execute_in)
     );
 
+    fetcher_port cu_to_fetch();
     FetchUnit fetch(
         .clock(clock),
         .nreset(nreset),
         .pc(pc),
-        .increment(increment),
+        .control_unit(cu_to_fetch),
         .bus(bus),
         .decoder(fetch_out)
     );
 
+    decoder_port cu_to_decode();
     DecodeUnit decode(
         .clock(clock),
         .nreset(nreset),
+        .control_unit(cu_to_decode),
         .fetcher(decode_in),
         .executor(decode_out),
         .register_file(decode_to_reg)
     );
 
-    execute_port cu_to_execute();
+    executor_port cu_to_execute();
     ExecuteUnit execute(
         .clock(clock),
         .nreset(nreset),
@@ -110,14 +112,28 @@ module ControlUnit (
         .control_unit(cu_to_execute)
     );
 
+    always_comb begin 
+        flush = cu_to_execute.set_pc;
+        cu_to_execute.flush = flush;
+        cu_to_fetch.flush = flush;
+        cu_to_decode.flush = flush;
+    end
+
     always_ff @(posedge clock or negedge nreset) begin
         if (!nreset) begin
             `LOG(("Resetting control unit"));
             pc <= 0;
         end else begin
-            if (increment) begin
-                `LOG(("Incrementing pc to (%d)", pc + 4));
+            `LOG(("PC is %0d", pc));
+            if (cu_to_execute.set_pc) begin
+                `LOG(("Jumping pc to %0d", cu_to_execute.new_pc));
+                pc <= cu_to_execute.new_pc;
+            end else if (cu_to_fetch.increment) begin
+                `LOG(("Incrementing pc to %0d", pc + 4));
                 pc <= pc + 4;
+            end
+            if (flush) begin
+                `LOG(("Pipeline flushed"));
             end
         end
     end

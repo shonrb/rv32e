@@ -2,12 +2,13 @@ typedef enum {
     EXECUTE_IDLE
 } execute_state;
 
-interface execute_port;
+interface executor_port;
     logic set_pc;
     logic [31:0] new_pc;
+    logic flush;
 
-    modport back  (output set_pc, new_pc);
-    modport front (input  set_pc, new_pc);
+    modport back  (output set_pc, new_pc, input  flush);
+    modport front (input  set_pc, new_pc, output flush);
 endinterface
 
 module ExecuteUnit (
@@ -16,7 +17,7 @@ module ExecuteUnit (
     skid_buffer_port.upstream decoder,
     reg_access_executor.front register_file,
     bus_master.front bus,
-    execute_port.back control_unit
+    executor_port.back control_unit
 );
     decoded inst;
     assign inst = decoder.data;
@@ -27,14 +28,18 @@ module ExecuteUnit (
     assign register_file.write_loc = inst.destination;
 
     always_ff @(posedge clock or negedge nreset) begin
-        if (!nreset) begin
-            `LOG(("Resetting execute unit"));
+        if (!nreset || control_unit.flush) begin
+            `LOG(("Resetting executor"));
+            register_file.do_write <= 0;
+            control_unit.set_pc <= 0;
         end else begin
             if (decoder.valid) begin
-                `LOG(("Got a decoded instruction"));
+                `LOG(("Got a decoded instruction..."));
                 execute();
             end else begin
                 `LOG(("Didn't get anything from decoder"));
+                register_file.do_write <= 0;
+                control_unit.set_pc <= 0;
             end
         end
     end
@@ -44,13 +49,27 @@ module ExecuteUnit (
         INST_LUI: begin
             register_file.do_write <= 1;
             register_file.write_data <= inst.immediate;
+            `LOG(("LUI"));
         end
         INST_AUIPC: begin
             register_file.do_write <= 1;
             register_file.write_data <= inst.address + inst.immediate;
+            `LOG(("AUIPC"));
         end
-        INST_JAL,
-        INST_JALR,
+        INST_JAL: begin
+            register_file.do_write <= 1;
+            register_file.write_data <= inst.address + 4;
+            control_unit.set_pc <= 1;
+            control_unit.new_pc <= inst.address + inst.immediate;
+            `LOG(("JAL"));
+        end
+        INST_JALR: begin
+            register_file.do_write <= 1;
+            register_file.write_data <= inst.address + 4;
+            control_unit.set_pc <= 1;
+            control_unit.new_pc <= register_file.read_data_1 + inst.immediate;
+            `LOG(("JALR"));
+        end
         INST_ADDI,
         INST_SLTI,
         INST_SLTIU,

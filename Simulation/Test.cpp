@@ -176,23 +176,50 @@ void test_auipc(MainDesign &sim, TestContext &test)
     auto dest = 1 << 7;
     auto inst = value | dest | Opcodes::OPCODE_AUIPC;
 
-    sim.write_word(0, NOP);
-    sim.write_word(4, NOP);
-    sim.write_word(8, NOP);
-    sim.write_word(12, inst);
+    u32 noop_count = test.random_u32(0, 8);
+
+    for (int i = 0; i < noop_count; ++i) {
+        sim.write_word(i * 4, NOP);
+    }
+
+    u32 inst_loc = noop_count * 4;
+    sim.write_word(inst_loc, inst);
 
     sim.reset();
-    sim.cycle(); // begin fetch
-    sim.cycle(); // end fetch
-    sim.cycle(); // decode + begin fetch
-    sim.cycle(); // execute + end fetch
-    sim.cycle(); // decode + begin fetch
-    sim.cycle(); // execute + end fetch
-    sim.cycle(); // decode + begin fetch
-    sim.cycle(); // execute + end fetch
-    sim.cycle(); // decode + begin fetch
-    sim.cycle(); // execute + end fetch
-    test.test_assert_eq(12 + value, sim.read_register<1>());
+    sim.do_cycles(2 + noop_count * 2);
+    sim.do_cycles(2);
+    test.test_assert_eq(inst_loc + value, sim.read_register<1>());
+}
+
+void test_jal(MainDesign &sim, TestContext &test)
+{
+    test.name("JAL instruction working");
+    
+    u32 imm = test.random_u32() << 12; 
+    u32 dest = 1 << 7;
+    u32 inst = imm | dest | Opcodes::OPCODE_JAL;
+
+    u32 jump_offset = 0;
+    jump_offset |= (imm >> 21 & binary_ones(10)) << 1;  // inst[30:21]
+    jump_offset |= (imm >> 20 & 1)               << 11; // inst[20]
+    jump_offset |= (imm >> 12 & binary_ones(8))  << 12; // inst[19:12]
+    jump_offset |= (imm >> 31) * binary_ones(12) << 20;  // inst[31] sign extended
+
+    u32 noop_count = test.random_u32(0, 8);
+
+    for (int i = 0; i < noop_count; ++i) {
+        sim.write_word(i * 4, NOP);
+    }
+
+    u32 inst_loc = noop_count * 4;
+    sim.write_word(inst_loc, inst);
+
+    sim.reset();
+    sim.do_cycles(2 + noop_count * 2);
+    sim.do_cycles(4);
+
+    test.test_assert_eq(inst_loc + jump_offset, sim.read_program_counter());
+    test.test_assert_eq(inst_loc + 4, sim.read_register<1>());
 }
 
 int main(int argc, const char **argv)
@@ -203,7 +230,8 @@ int main(int argc, const char **argv)
         context,
         test_fetch, 
         test_lui,
-        test_auipc
+        test_auipc,
+        test_jal
     );
 }
 

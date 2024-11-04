@@ -161,7 +161,7 @@ module BusController (
                     ? 32'hFFFFFFFF 
                     : 32'(AHB_ADDR_MAP[i]) - 1;
                 if (bus.address >= from && bus.address <= to) begin
-                    `LOG(("Multiplexed address (%d) to device (%d)", bus.address, i));
+                    `LOG(("Multiplexed address 0x%h to device %0d", bus.address, i));
                     sel <= 1 << i;
                     mux <= i;
                 end

@@ -27,6 +27,9 @@ public:
 
     void evaluate(BusDeviceSignals bus) override
     {
+        if (bus.addr - address_offset >= memory.size() / 4) {
+            return;
+        }
         bus.us_ready = 1;
         // TODO: delay on transfer to emulate real memory devices
         if (bus.sel && bus.trans == 2) {

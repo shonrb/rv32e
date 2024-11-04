@@ -1,6 +1,13 @@
 .globl _start
 _start:
 
+nop
+back_label:
+nop
+nop
+jal x2, back_label
+
+
 li x4, 100
 add x1, x2, x3
 
