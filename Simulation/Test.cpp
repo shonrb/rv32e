@@ -222,6 +222,11 @@ void test_jal(MainDesign &sim, TestContext &test)
     test.test_assert_eq(inst_loc + 4, sim.read_register<1>());
 }
 
+void test_jalr(MainDesign &sim, TestContext &test)
+{
+    // TODO: test JALR
+}
+
 int main(int argc, const char **argv)
 {
     auto context = std::make_shared<VerilatedContext>();
@@ -231,7 +236,8 @@ int main(int argc, const char **argv)
         test_fetch, 
         test_lui,
         test_auipc,
-        test_jal
+        test_jal,
+        test_jalr
     );
 }
 

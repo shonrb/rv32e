@@ -32,8 +32,10 @@ module RegisterFile (
 );
     logic [31:0] x[16];
 
-    assign executor.read_data_1 = x[decoder.read_loc_1];
-    assign executor.read_data_2 = x[decoder.read_loc_2];
+    always_comb begin
+        executor.read_data_1 = read_register(decoder.read_loc_1);
+        executor.read_data_2 = read_register(decoder.read_loc_2);
+    end
 
     always_ff @(negedge clock or negedge nreset) begin
         if (!nreset) begin
@@ -61,5 +63,16 @@ module RegisterFile (
             ));
         end
     end
+
+    function [31:0] read_register(input [3:0] loc);
+    begin
+        if (loc == 0) 
+            return 0;
+        else if (executor.do_write && executor.write_loc == loc) 
+            return executor.write_data;
+        else 
+            return x[loc];
+    end
+    endfunction
 endmodule
 
