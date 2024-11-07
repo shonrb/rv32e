@@ -30,7 +30,7 @@ module RegisterFile (
     reg_access_decoder.back decoder,
     reg_access_executor.back executor
 );
-    logic [31:0] x[16];
+    logic [31:0] x[16:1];
 
     always_comb begin
         executor.read_data_1 = read_register(decoder.read_loc_1);
@@ -57,9 +57,11 @@ module RegisterFile (
                 end
             end
             `LOG((
-                "Reading from x%0d and x%0d", 
+                "Reading from x%0d (%0d) and x%0d (%0d)", 
                 decoder.read_loc_1, 
-                decoder.read_loc_2
+                executor.read_data_1,
+                decoder.read_loc_2,
+                executor.read_data_2
             ));
         end
     end

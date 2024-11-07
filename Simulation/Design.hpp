@@ -126,10 +126,14 @@ public:
         top->__024unit->set_logging(l);
     }
 
-    template<usize I>
-    u32 read_register() requires (I < 16)
+    u32 read_register(usize i) 
     {
-        return top->Top->sig_register(I);
+        return top->Top->sig_register(i);
+    }
+
+    void write_register(usize i, u32 value) 
+    {
+        top->Top->write_sig_register(i, value);
     }
 
     u32 read_instruction() const

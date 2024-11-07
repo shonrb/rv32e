@@ -3,6 +3,7 @@
 
 // TODO: Error signal for malformed instructions from executor rather
 //       than decoder
+// FIXME: JALR requires that funct3 is zero'd
 
 // Global parameters
 parameter AHB_DEVICE_COUNT /* verilator public */ = 2;
@@ -84,5 +85,11 @@ module Top (
     `EXPOSE_SIGNAL(
         (input [3:0] i), cu.register_file.x[i], sig_register, bit[31:0]
     );
+
+    task write_sig_register (input [3:0] i, input [31:0] value); 
+        /* verilator public */
+        if (i > 0)
+            cu.register_file.x[i] = value;
+    endtask
 endmodule
 
