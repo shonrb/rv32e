@@ -1,57 +1,19 @@
 `include "Common.svh"
+`include "Format.svh"
 
-typedef enum {
-    INST_LUI,
-    INST_AUIPC,
-    INST_JAL,
-    INST_JALR,
-    INST_ADDI,
-    INST_SLTI,
-    INST_SLTIU,
-    INST_XORI,
-    INST_ORI,
-    INST_ANDI,
-    INST_SLLI,
-    INST_SRLI,
-    INST_SRAI,
-    INST_ADD,
-    INST_SUB,
-    INST_SLL,
-    INST_SLT,
-    INST_SLTU,
-    INST_XOR,
-    INST_SRL,
-    INST_SRA,
-    INST_OR,
-    INST_AND,
-    INST_BEQ,
-    INST_BNE,
-    INST_BLT,
-    INST_BGE,
-    INST_BLTU,
-    INST_BGEU,
-    INST_LB,
-    INST_LH,
-    INST_LW,
-    INST_LBU,
-    INST_LHU,
-    INST_SB,
-    INST_SH,
-    INST_SW,
-    INST_NOP
-} instruction_kind;
+typedef struct {
+    logic [6:0] opcode;
+    logic [2:0] funct3;
+    logic [6:0] funct7;
+    logic [31:0] immediate;
+    logic [3:0] destination;
+    logic [31:0] pc;
+} decoded;
 
 typedef struct {
     logic [31:0] instruction;
     logic [31:0] address;
 } fetched;
-
-typedef struct {
-    instruction_kind instruction;
-    logic [31:0] immediate;
-    logic [3:0] destination;
-    logic [31:0] address;
-} decoded;
 
 module ControlUnit (
     input clock,

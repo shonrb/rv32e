@@ -27,6 +27,15 @@ module ExecuteUnit (
 
     assign register_file.write_loc = inst.destination;
 
+    executor_to_alu alu_port();
+    ArithmeticLogicUnit alu(.executor(alu_port));
+
+    assign alu_port.a = register_file.read_data_1;
+
+    always_comb begin
+        
+    end
+
     always_ff @(posedge clock or negedge nreset) begin
         if (!nreset || control_unit.flush) begin
             `LOG(("Resetting executor"));
@@ -36,6 +45,7 @@ module ExecuteUnit (
             if (decoder.valid) begin
                 `LOG(("Got a decoded instruction..."));
                 execute();
+                `LOG(("%p", decoder.data));
             end else begin
                 `LOG(("Didn't get anything from decoder"));
                 register_file.do_write <= 0;
@@ -45,67 +55,39 @@ module ExecuteUnit (
     end
 
     task execute;
-        case (inst.instruction)
-        INST_LUI: begin
+        case (inst.opcode)
+        OPCODE_LUI: begin
             register_file.do_write <= 1;
             register_file.write_data <= inst.immediate;
             `LOG(("LUI"));
         end
-        INST_AUIPC: begin
+        OPCODE_AUIPC: begin
             register_file.do_write <= 1;
-            register_file.write_data <= inst.address + inst.immediate;
+            register_file.write_data <= inst.pc + inst.immediate;
             `LOG(("AUIPC"));
         end
-        INST_JAL: begin
+        OPCODE_JAL: begin
             register_file.do_write <= 1;
-            register_file.write_data <= inst.address + 4;
+            register_file.write_data <= inst.pc + 4;
             control_unit.set_pc <= 1;
-            control_unit.new_pc <= inst.address + inst.immediate;
+            control_unit.new_pc <= inst.pc + inst.immediate;
             `LOG(("JAL"));
         end
-        INST_JALR: begin
+        OPCODE_JALR: begin
             register_file.do_write <= 1;
-            register_file.write_data <= inst.address + 4;
+            register_file.write_data <= inst.pc + 4;
             control_unit.set_pc <= 1;
             control_unit.new_pc <= register_file.read_data_1 + inst.immediate;
             `LOG(("JALR"));
         end
-        INST_ADDI,
-        INST_SLTI,
-        INST_SLTIU,
-        INST_XORI,
-        INST_ORI,
-        INST_ANDI,
-        INST_SLLI,
-        INST_SRLI,
-        INST_SRAI,
-        INST_ADD,
-        INST_SUB,
-        INST_SLL,
-        INST_SLT,
-        INST_SLTU,
-        INST_XOR,
-        INST_SRL,
-        INST_SRA,
-        INST_OR,
-        INST_AND,
-        INST_BEQ,
-        INST_BNE,
-        INST_BLT,
-        INST_BGE,
-        INST_BLTU,
-        INST_BGEU,
-        INST_LB,
-        INST_LH,
-        INST_LW,
-        INST_LBU,
-        INST_LHU,
-        INST_SB,
-        INST_SH,
-        INST_SW, 
-        INST_NOP: begin 
-           register_file.do_write <= 0; 
-        end
+        //OPCODE_SOME_OP_IMM:
+        //OPCODE_SOME_OP_REG:
+        //OPCODE_SOME_BRANCH:
+        //OPCODE_SOME_LOAD:
+        //OPCODE_SOME_STORE:
+        //OPCODE_SOME_MISC_MEM:
+        //OPCODE_SOME_SYSTEM:
+        default: begin end
         endcase 
     endtask
 endmodule

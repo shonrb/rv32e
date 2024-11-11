@@ -8,7 +8,7 @@ function string show_lui(input instruction_split split);
     return $sformatf(
         "lui %s, %0d", 
         show_reg(split.rd),
-        split.u_immediate >> 12
+        split.immediate >> 12
     );
 endfunction
 
@@ -16,7 +16,7 @@ function string show_auipc(input instruction_split split);
     return $sformatf(
         "auipc %s, %0d", 
         show_reg(split.rd),
-        split.u_immediate >> 12
+        split.immediate >> 12
     );
 endfunction
 
@@ -24,7 +24,7 @@ function string show_jal(input instruction_split split);
     return $sformatf(
         "jal %s, %0d", 
         show_reg(split.rd),
-        split.j_immediate
+        split.immediate
     );
 endfunction
 
@@ -33,7 +33,7 @@ function string show_jalr(input instruction_split split);
         "jalr %s, %s, %0d", 
         show_reg(split.rd),
         show_reg(split.rs1),
-        split.i_immediate
+        split.immediate
     );
 endfunction
 
@@ -42,17 +42,17 @@ function string show_op_imm(input instruction_split split);
     integer imm;
 
     case (split.funct3)
-    OP_IMM_ADDI:  begin imm = split.i_immediate;  opcode = "addi"; end //} = {split.i_immediate, "addi" };
-    OP_IMM_SLTI:  begin imm = split.i_immediate; opcode = "slti"; end
-    OP_IMM_SLTIU: begin imm = split.i_immediate; opcode = "sltiu"; end
-    OP_IMM_XORI:  begin imm = split.i_immediate; opcode = "xori"; end
-    OP_IMM_ORI:   begin imm = split.i_immediate; opcode = "ori"; end
-    OP_IMM_ANDI:  begin imm = split.i_immediate; opcode = "andi"; end
-    OP_IMM_SLLI:  begin imm = split.i_immediate; opcode = "slli"; end
+    OP_IMM_ADDI:  begin imm = split.immediate;  opcode = "addi"; end //} = {split.i_immediate, "addi" };
+    OP_IMM_SLTI:  begin imm = split.immediate; opcode = "slti"; end
+    OP_IMM_SLTIU: begin imm = split.immediate; opcode = "sltiu"; end
+    OP_IMM_XORI:  begin imm = split.immediate; opcode = "xori"; end
+    OP_IMM_ORI:   begin imm = split.immediate; opcode = "ori"; end
+    OP_IMM_ANDI:  begin imm = split.immediate; opcode = "andi"; end
+    OP_IMM_SLLI:  begin imm = split.immediate; opcode = "slli"; end
     OP_IMM_SOME_SHIFT_R: 
         case (split.funct7)
-        SHIFT_R_LOGIC: begin imm = split.shamt; opcode = "srli"; end
-        SHIFT_R_ARITH: begin imm = split.shamt; opcode = "srai"; end
+        SHIFT_R_LOGIC: begin imm = split.immediate; opcode = "srli"; end
+        SHIFT_R_ARITH: begin imm = split.immediate; opcode = "srai"; end
         default: return $sformatf(
             "an invalid register-immediate right shift, funct7=(%b)", 
             split.funct7
@@ -141,7 +141,7 @@ begin
         opcode, 
         show_reg(split.rs1),
         show_reg(split.rs2),
-        split.b_immediate
+        split.immediate
     );
 end
 endfunction
@@ -183,7 +183,7 @@ begin
         "%s %s, %0d(%s)", 
         opcode, 
         show_reg(split.rd),
-        split.s_immediate, 
+        split.immediate, 
         show_reg(split.rs1)
     );
 end
