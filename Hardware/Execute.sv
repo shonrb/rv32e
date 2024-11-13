@@ -130,7 +130,7 @@ module ExecuteUnit (
         OP_REG_SOME_ARITH: begin
             case (inst.funct7)
             ARITH_REG_ADD: return ALU_ADD;
-            ARITH_REG_SUB: return ALU_SUBTRACT;
+            ARITH_REG_SUB: return ALU_SUBTRACT; 
             default:       `LOG(("???"));
             endcase
         end
