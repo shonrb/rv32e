@@ -56,6 +56,15 @@ public:
         return random(1, 15);
     }
 
+    u32 random_reg_exclude(std::same_as<u32> auto ...notval)
+    {
+        u32 val;
+        do {
+            val = random_reg();
+        } while (([&]{ return val == notval; }() || ...));
+        return val;
+    }
+
     void test_assert(bool cond, const std::string &msg)
     {
         ++out_of;

@@ -19,3 +19,8 @@ u32 binary_ones(usize n)
     return (1 << n) - 1;
 }
 
+u32 shiftr_arithmetic(u32 a, u32 b)
+{
+    return (a >> b) | ((a >> 31) * (binary_ones(32) << (32 - b)));
+}
+

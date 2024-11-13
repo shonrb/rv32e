@@ -30,10 +30,21 @@ module ExecuteUnit (
     executor_to_alu alu_port();
     ArithmeticLogicUnit alu(.executor(alu_port));
 
-    assign alu_port.a = register_file.read_data_1;
-
     always_comb begin
-        
+        // ALU operands
+        if (inst.opcode == OPCODE_SOME_OP_IMM) begin
+            alu_port.a = register_file.read_data_1;
+            alu_port.b = inst.immediate;
+            alu_port.operation = alu_op_imm();
+        end else if (inst.opcode == OPCODE_SOME_OP_REG) begin
+            alu_port.a = register_file.read_data_1;
+            alu_port.b = register_file.read_data_2;
+            alu_port.operation = alu_op_reg();
+        end else begin
+            alu_port.a = 0;
+            alu_port.b = 0;
+            alu_port.operation = ALU_NONE;
+        end
     end
 
     always_ff @(posedge clock or negedge nreset) begin
@@ -80,8 +91,18 @@ module ExecuteUnit (
             control_unit.new_pc <= register_file.read_data_1 + inst.immediate;
             `LOG(("JALR"));
         end
-        //OPCODE_SOME_OP_IMM:
-        //OPCODE_SOME_OP_REG:
+        OPCODE_SOME_OP_IMM,
+        OPCODE_SOME_OP_REG: begin
+            `LOG((
+                "Doing op (%0d) with (0x%h and 0x%h) = 0x%h",
+                alu_port.operation,
+                alu_port.a,
+                alu_port.b,
+                alu_port.result
+            ));
+            register_file.do_write <= 1;
+            register_file.write_data <= alu_port.result;
+        end
         //OPCODE_SOME_BRANCH:
         //OPCODE_SOME_LOAD:
         //OPCODE_SOME_STORE:
@@ -90,5 +111,49 @@ module ExecuteUnit (
         default: begin end
         endcase 
     endtask
+
+    function alu_operation alu_op_reg();
+        case (inst.funct3)
+        OP_REG_SLT:  return ALU_LESS_THAN;
+        OP_REG_SLTU: return ALU_LESS_THAN_UNSIGNED;
+        OP_REG_XOR:  return ALU_XOR;
+        OP_REG_OR:   return ALU_OR;
+        OP_REG_AND:  return ALU_AND;
+        OP_REG_SLL:  return ALU_SHIFT_L_LOGIC;
+        OP_REG_SOME_SHIFT_R: begin
+            case (inst.funct7)
+            SHIFT_R_LOGIC: return ALU_SHIFT_R_LOGIC;
+            SHIFT_R_ARITH: return ALU_SHIFT_R_ARITH;
+            default:       `LOG(("???"));
+            endcase
+        end
+        OP_REG_SOME_ARITH: begin
+            case (inst.funct7)
+            ARITH_REG_ADD: return ALU_ADD;
+            ARITH_REG_SUB: return ALU_SUBTRACT;
+            default:       `LOG(("???"));
+            endcase
+        end
+        endcase
+    endfunction
+
+    function alu_operation alu_op_imm();
+        case (inst.funct3)
+        OP_IMM_ADDI:  return ALU_ADD;
+        OP_IMM_SLTI:  return ALU_LESS_THAN;
+        OP_IMM_SLTIU: return ALU_LESS_THAN_UNSIGNED;
+        OP_IMM_XORI:  return ALU_XOR;
+        OP_IMM_ORI:   return ALU_OR;
+        OP_IMM_ANDI:  return ALU_AND;
+        OP_IMM_SLLI:  return ALU_SHIFT_L_LOGIC;
+        OP_IMM_SOME_SHIFT_R: begin
+            case (inst.funct7)
+            SHIFT_R_LOGIC: return ALU_SHIFT_R_LOGIC;
+            SHIFT_R_ARITH: return ALU_SHIFT_R_ARITH;
+            default:       `LOG(("???"));
+            endcase
+        end
+        endcase
+    endfunction
 endmodule
 
