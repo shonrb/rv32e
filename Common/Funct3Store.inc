@@ -1,0 +1,3 @@
+F3_STORE_BYTE     = 0, // 000
+F3_STORE_HALFWORD = 1, // 001
+F3_STORE_WORD     = 2  // 010

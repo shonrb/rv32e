@@ -7,7 +7,8 @@
 #include <fstream>
 
 std::array prog {
-#include "Code/All.inc"
+    (unsigned)(3)
+//#include "Code/All.inc"
 };
 
 int main(int argc, const char **argv)

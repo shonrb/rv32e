@@ -1,6 +1,8 @@
 #include <print>
 #include <random>
 
+#include "../Asm/Asm.h"
+
 template<typename ...Ts>
 void print_coloured(bool success, std::format_string<Ts...> fmt, Ts &&...args)
 {
@@ -10,6 +12,29 @@ void print_coloured(bool success, std::format_string<Ts...> fmt, Ts &&...args)
     std::print("{}", success ? green : red);
     std::println(fmt, args...);
     std::print("{}", reset);
+}
+
+std::vector<u32> assemble(const std::string &src) 
+{
+    std::vector<u32> res;
+    AsmState state;
+    asm_init(&state, const_cast<char*>(src.c_str()), src.length());
+
+    while (true) {
+        u32 next;
+        std::println("here");
+        auto status = asm_next(&state, &next);
+        if (status == ASM_ERROR) {
+            print_coloured(false, "Assembler error: {}", state.backtrack_reason);
+            return {};
+        }
+        if (status == ASM_DONE) {
+            break;
+        }
+        res.push_back(next);
+    }
+
+    return res;
 }
 
 class TestContext;

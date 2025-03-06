@@ -16,14 +16,45 @@ constexpr auto device_count = VTop___024unit::AHB_DEVICE_COUNT;
 constexpr auto address_map  = VTop___024unit::AHB_ADDR_MAP;
 }
 
-using Opcodes  = VTop___024unit::opcode_field;
-using OpImmF3  = VTop___024unit::funct3_op_imm;
-using OpRegF3  = VTop___024unit::funct3_op_reg;
-using RShiftF7 = VTop___024unit::funct7_r_shift_kind;
-using ArithF7  = VTop___024unit::funct7_reg_arith;
-using BranchF3 = VTop___024unit::funct3_branch;
-using LoadF3   = VTop___024unit::funct3_load;
-using StoreF3  = VTop___024unit::funct3_store;
+enum Opcodes
+{
+#include "../Common/Opcodes.inc"
+};
+
+enum OpImmF3
+{
+#include "../Common/Funct3RegImm.inc"
+};
+
+enum OpRegF3
+{
+#include "../Common/Funct3RegReg.inc"
+};
+
+enum RShiftF7
+{
+#include "../Common/Funct7RShift.inc"
+};
+
+enum ArithF7
+{
+#include "../Common/Funct7RegArith.inc"
+};
+
+enum BranchF3
+{
+#include "../Common/Funct3Branch.inc"
+};
+
+enum LoadF3
+{
+#include "../Common/Funct3Load.inc"
+};
+
+enum StoreF3
+{
+#include "../Common/Funct3Store.inc"
+};
 
 template<BusDevice ...Devices> 
 requires (sizeof...(Devices) == params::device_count)

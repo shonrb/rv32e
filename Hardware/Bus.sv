@@ -36,6 +36,97 @@ typedef enum logic {
     RESP_ERROR = 1
 } transfer_response;
 
+/*
+Locked bus interactions : 
+interface bus_control;
+    // syncing
+    wire try_lock;
+    wire have_lock;
+    // master
+    wire write;
+    wire [31:0] addr;
+    transfer_size size;
+    transfer_burst burst;
+    transfer_kind trans;
+    logic ready;
+    wire [31:0] wdata;
+    // slave
+    logic [31:0] rdata;
+    logic ready;
+    transfer_response resp;
+
+    modport front (
+        output try_lock, write, addr, size, burst, trans, ready, wdata,
+        input have_lock, rdata, ready, resp
+    );
+
+    modport back (
+        input try_lock, write, addr, size, burst, trans, ready, wdata,
+        output have_lock, rdata, ready, resp
+    );
+endinterface
+ 
+module BusController2 #(parameter INPUT_COUNT) (
+    input clock,
+    input nreset,
+    bus_control.back inputs[INPUT_COUNT],
+    // master
+    output wire write,
+    output wire [31:0] addr,
+    output transfer_size size,
+    output transfer_burst burst,
+    output transfer_kind trans,
+    output logic ready,
+    output wire [31:0] wdata,
+    // slave
+    input logic [31:0] rdata,
+    input logic ready,
+    input transfer_response resp
+);
+    logic locker_idx[$clog2(INPUT_COUNT)-1 : 0];
+    logic locked;
+
+    always_comb begin
+        if (locked) begin
+            write <= inputs[locker_idx].write;
+            addr <= inputs[locker_idx].addr;
+            transfer_size <= inputs[locker_idx].transfer_size;
+            transfer_burst <= inputs[locker_idx].transfer_burst;
+            transfer_kind <= inputs[locker_idx].transfer_kind;
+            ready <= inputs[locker_idx].ready;
+            wdata <= inputs[locker_idx].wdata;
+            inputs[locker_idx].rdata <= rdata;
+            inputs[locker_idx].ready <= ready;
+            inputs[locker_idx].resp <= resp;
+        end else begin
+            write <= 0;
+            addr <= 0;
+            transfer_size <= 0;
+            transfer_burst <= 0;
+            transfer_kind <= 0;
+            ready <= 0;
+            wdata <= 0;
+            inputs[locker_idx].rdata <= 0;
+            inputs[locker_idx].ready <= 0;
+            inputs[locker_idx].resp <= 0;
+        end
+    end
+
+    always_ff @(negedge clock or negedge reset) begin
+        if (!locked) begin
+            for (int i = 0; i < INPUT_COUNT; ++i) begin
+                if (inputs[i].try_lock) begin
+                    locked = 1;
+                    locker_idx = i;
+                end
+            end
+        end else if (!inputs[locker_idx].try_lock) begin
+            locked = 0;
+        end
+    end
+endmodule
+*/
+
 interface bus_slv_in;
     wire write;
     wire [31:0] addr;
@@ -135,15 +226,6 @@ module BusController (
     assign slv_in.wdata    = bus.write_data;
 
     // Ensure memory map is ordered
-    generate 
-        localparam [31:0] prev = 0;
-        for (genvar i = 0; i < AHB_DEVICE_COUNT-1; i++) begin
-            localparam [31:0] bnd = AHB_ADDR_MAP[i];
-            if (prev > bnd)
-                $error("Memory map is not ordered");
-            assign prev = bnd;
-        end
-    endgenerate
 
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin

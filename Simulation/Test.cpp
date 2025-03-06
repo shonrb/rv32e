@@ -6,7 +6,24 @@
 
 #include <tuple>
 
-constexpr u32 NOP = Opcodes::OPCODE_SOME_OP_IMM | (OpImmF3::OP_IMM_ADDI);
+constexpr u32 NOP = OPCODE_SOME_OP_IMM | (F3_OP_IMM_ADDI);
+
+void test_asm_disasm(MainDesign &sim, TestContext &test)
+{
+    test.name("Assembly and Disassembly");
+
+    auto test_single_asm = [&](std::string src) {
+        auto asmed = assemble(src);
+        if (asmed.size() != 1) {
+            test.test_assert(false, "TODO");
+            return;
+        }
+        auto disasmed = sim.disassemble(asmed[0]);
+        test.test_assert_eq(src, disasmed);
+    };
+
+    test_single_asm("addi x0, x3, 23");
+}
 
 void test_fetch(MainDesign &sim, TestContext &test)
 {
@@ -27,7 +44,7 @@ void test_lui(MainDesign &sim, TestContext &test)
     test.name("LUI instruction");
     auto value = test.random(0, 4096) << 12;
     auto dest = test.random_reg();
-    auto inst = value | (dest << 7) | Opcodes::OPCODE_LUI;
+    auto inst = value | (dest << 7) | OPCODE_LUI;
     sim.write_word(0, inst);
     sim.reset();
     sim.cycle(); // begin transfer
@@ -42,7 +59,7 @@ void test_auipc(MainDesign &sim, TestContext &test)
     test.name("AUIPC instruction");
     auto value = test.random(0, 4096) << 12;
     auto dest = test.random_reg();
-    auto inst = value | (dest << 7) | Opcodes::OPCODE_AUIPC;
+    auto inst = value | (dest << 7) | OPCODE_AUIPC;
 
     u32 noop_count = test.random(0, 8);
 
@@ -65,7 +82,7 @@ void test_jal(MainDesign &sim, TestContext &test)
     
     u32 imm = test.random_u32() << 12; 
     u32 dest = test.random_reg();
-    u32 inst = imm | (dest << 7) | Opcodes::OPCODE_JAL;
+    u32 inst = imm | (dest << 7) | OPCODE_JAL;
 
     u32 jump_offset = 0;
     jump_offset |= (imm >> 21 & binary_ones(10)) << 1;  // inst[30:21]
@@ -99,7 +116,7 @@ void test_jalr(MainDesign &sim, TestContext &test)
     u32 src = test.random_reg();
     u32 target = test.random_u32();
     
-    u32 inst = imm | (src << 15) | (dest << 7) | Opcodes::OPCODE_JALR;
+    u32 inst = imm | (src << 15) | (dest << 7) | OPCODE_JALR;
 
     u32 jump_offset = 0;
     jump_offset |= (imm >> 31) * binary_ones(21) << 11;
@@ -152,17 +169,17 @@ void test_op_imm(MainDesign &sim, TestContext &test)
     };
 
     auto inst = [&](OpImmF3 f3) -> u32 {
-        return imm | (reg << 15) | (f3 << 12) | (dest << 7) | Opcodes::OPCODE_SOME_OP_IMM;
+        return imm | (reg << 15) | (f3 << 12) | (dest << 7) | OPCODE_SOME_OP_IMM;
     };
 
     sim.reset();
     sim.write_register(reg, reg_val);
-    sim.write_word(0,  inst(OpImmF3::OP_IMM_ADDI));
-    sim.write_word(4,  inst(OpImmF3::OP_IMM_SLTIU));
-    sim.write_word(8,  inst(OpImmF3::OP_IMM_XORI));
-    sim.write_word(12, inst(OpImmF3::OP_IMM_ORI));
-    sim.write_word(16, inst(OpImmF3::OP_IMM_ANDI));
-    sim.write_word(20, inst(OpImmF3::OP_IMM_SLTI));
+    sim.write_word(0,  inst(F3_OP_IMM_ADDI));
+    sim.write_word(4,  inst(F3_OP_IMM_SLTIU));
+    sim.write_word(8,  inst(F3_OP_IMM_XORI));
+    sim.write_word(12, inst(F3_OP_IMM_ORI));
+    sim.write_word(16, inst(F3_OP_IMM_ANDI));
+    sim.write_word(20, inst(F3_OP_IMM_SLTI));
 
     sim.do_cycles(2);
 
@@ -196,15 +213,15 @@ void test_op_imm_shift(MainDesign &sim, TestContext &test)
     auto inst = [&](OpImmF3 f3, u32 f7) -> u32 {
         u32 res;
         res |= (f7 << 25) | (shamt << 20) | (reg << 15);
-        res |= (f3 << 12) | (dest << 7) | Opcodes::OPCODE_SOME_OP_IMM;
+        res |= (f3 << 12) | (dest << 7) | OPCODE_SOME_OP_IMM;
         return res;
     };
 
     sim.reset();
     sim.write_register(reg, reg_val);
-    sim.write_word(0,  inst(OpImmF3::OP_IMM_SLLI,         0));
-    sim.write_word(4,  inst(OpImmF3::OP_IMM_SOME_SHIFT_R, RShiftF7::SHIFT_R_LOGIC));
-    sim.write_word(8,  inst(OpImmF3::OP_IMM_SOME_SHIFT_R, RShiftF7::SHIFT_R_ARITH));
+    sim.write_word(0,  inst(F3_OP_IMM_SLLI,         0));
+    sim.write_word(4,  inst(F3_OP_IMM_SOME_SHIFT_R, F7_SHIFT_R_LOGIC));
+    sim.write_word(8,  inst(F3_OP_IMM_SOME_SHIFT_R, F7_SHIFT_R_ARITH));
 
     sim.do_cycles(2);
 
@@ -239,7 +256,7 @@ void test_op_reg(MainDesign &sim, TestContext &test)
     auto inst = [&](OpRegF3 f3, u32 f7) -> u32 {
         u32 res;
         res |= (f7 << 25) | (reg_2 << 20) | (reg_1 << 15);
-        res |= (f3 << 12) | (dest << 7) | Opcodes::OPCODE_SOME_OP_REG;
+        res |= (f3 << 12) | (dest << 7) | OPCODE_SOME_OP_REG;
         return res;
     };
 
@@ -247,13 +264,13 @@ void test_op_reg(MainDesign &sim, TestContext &test)
     sim.write_register(reg_1, reg_1_val);
     sim.write_register(reg_2, reg_2_val);
 
-    sim.write_word(0,  inst(OpRegF3::OP_REG_SOME_ARITH, ArithF7::ARITH_REG_ADD));
-    sim.write_word(4,  inst(OpRegF3::OP_REG_SOME_ARITH, ArithF7::ARITH_REG_SUB));
-    sim.write_word(8,  inst(OpRegF3::OP_REG_XOR, 0));
-    sim.write_word(12, inst(OpRegF3::OP_REG_OR, 0));
-    sim.write_word(16, inst(OpRegF3::OP_REG_AND, 0));
-    sim.write_word(20, inst(OpRegF3::OP_REG_SLTU, 0));
-    sim.write_word(24, inst(OpRegF3::OP_REG_SLT, 0));
+    sim.write_word(0,  inst(F3_OP_REG_SOME_ARITH, F7_ARITH_REG_ADD));
+    sim.write_word(4,  inst(F3_OP_REG_SOME_ARITH, F7_ARITH_REG_SUB));
+    sim.write_word(8,  inst(F3_OP_REG_XOR, 0));
+    sim.write_word(12, inst(F3_OP_REG_OR, 0));
+    sim.write_word(16, inst(F3_OP_REG_AND, 0));
+    sim.write_word(20, inst(F3_OP_REG_SLTU, 0));
+    sim.write_word(24, inst(F3_OP_REG_SLT, 0));
 
     sim.do_cycles(2);
 
@@ -266,7 +283,7 @@ void test_op_reg(MainDesign &sim, TestContext &test)
 
 void test_op_reg_shift(MainDesign &sim, TestContext &test)
 {
-    test.name("Register-register arithmetic instructions");
+    test.name("Register-register shift instructions");
 
     auto reg_1     = test.random_reg();
     auto reg_1_val = test.random_u32();
@@ -284,7 +301,7 @@ void test_op_reg_shift(MainDesign &sim, TestContext &test)
     auto inst = [&](OpRegF3 f3, u32 f7) -> u32 {
         u32 res;
         res |= (f7 << 25) | (reg_2 << 20) | (reg_1 << 15);
-        res |= (f3 << 12) | (dest << 7) | Opcodes::OPCODE_SOME_OP_REG;
+        res |= (f3 << 12) | (dest << 7) | OPCODE_SOME_OP_REG;
         return res;
     };
 
@@ -292,9 +309,9 @@ void test_op_reg_shift(MainDesign &sim, TestContext &test)
     sim.write_register(reg_1, reg_1_val);
     sim.write_register(reg_2, reg_2_val);
 
-    sim.write_word(0,  inst(OpRegF3::OP_REG_SLL, 0));
-    sim.write_word(4,  inst(OpRegF3::OP_REG_SOME_SHIFT_R, RShiftF7::SHIFT_R_LOGIC));
-    sim.write_word(8,  inst(OpRegF3::OP_REG_SOME_SHIFT_R, RShiftF7::SHIFT_R_ARITH));
+    sim.write_word(0,  inst(F3_OP_REG_SLL, 0));
+    sim.write_word(4,  inst(F3_OP_REG_SOME_SHIFT_R, F7_SHIFT_R_LOGIC));
+    sim.write_word(8,  inst(F3_OP_REG_SOME_SHIFT_R, F7_SHIFT_R_ARITH));
 
     sim.do_cycles(2);
 
@@ -311,6 +328,7 @@ int main(int argc, const char **argv)
     context->commandArgs(argc, argv);
     run_tests(
         context,
+        test_asm_disasm,
         test_fetch, 
         test_lui,
         test_auipc,

@@ -1,0 +1,5 @@
+F3_LOAD_BYTE           = 0, // 000
+F3_LOAD_HALFWORD       = 1, // 001
+F3_LOAD_WORD           = 2, // 010
+F3_LOAD_BYTE_UPPER     = 4, // 100
+F3_LOAD_HALFWORD_UPPER = 5, // 101

@@ -1,45 +1,69 @@
-BUILD = Build
-BUILD_BINS = $(BUILD)/Bin
-BUILD_CODE = $(BUILD)/Code
+HERE := $(abspath $(lastword $(MAKEFILE_LIST)))
 
-VC = verilator
-AS = riscv64-unknown-elf-as
-LD = riscv64-unknown-elf-ld
-OC = riscv64-unknown-elf-objcopy
+# All
 
-ASM_SRC = $(wildcard Code/*.asm)
-ASM_INC = $(addprefix $(BUILD_CODE)/, $(notdir $(ASM_SRC:.asm=.inc)))
+ASM_BIN = Build/Asm
+SIM_BIN = Build/Sim
+TEST_BIN = Build/Test
 
-SV_SRC = $(wildcard Hardware/*.sv)
-SV_LIB = $(wildcard Hardware/*.svh)
-SV_FLAGS = --cc --exe --build --Mdir Build 
-SV_FLAGS += --top-module Top -IHardware
+all: $(ASM_BIN) $(SIM_BIN) $(TEST_BIN)
 
-CXX_SRC = $(wildcard Simulation/*.cpp)
-CXX_BIN = $(addprefix $(BUILD_BINS)/, $(notdir $(CXX_SRC:.cpp=)))
-CXX_LIB = $(wildcard Simulation/*.hpp) $(ASM_INC)
-CXX_FLAGS = --std=c++23
+# Assembler
 
-# Program include files
-$(BUILD_CODE)/%.inc: Code/%.asm
-	$(eval TMP := Build/$(notdir $<))
-	mkdir -p ./Build/Code
-	riscv64-unknown-elf-as -march=rv32e -mno-relax -mno-arch-attr $< -o $(TMP).o
-	riscv64-unknown-elf-ld -melf32lriscv $(TMP).o -o $(TMP).elf
-	riscv64-unknown-elf-objcopy -O binary $(TMP).elf $(TMP).bin
-	hexdump -v -e '1/4 "0x%08xu, "' $(TMP).bin > $@
+ASM_SRC  = $(filter-out Asm/Main.c, $(wildcard Asm/*.c))
+ASM_INC  = $(wildcard Asm/*.h)
+ASM_MAIN = Asm/Main.c
+ASM_OBJ  = $(wildcard Build/Lib/Asm/*.o)
 
-# Verilated models
-$(BUILD_BINS)/%: Simulation/%.cpp $(CXX_LIB) $(SV_SRC) $(SV_LIB)	
-	mkdir -p ./Build/Bin
-	verilator $(SV_FLAGS) -CFLAGS $(CXX_FLAGS) $(SV_SRC) $< -o Bin/$(notdir $@)
+asm_objects: $(ASM_SRC) $(ASM_INC)
+	mkdir -p Build/Lib/Asm
+	gcc $(ASM_SRC) -lm -g -c 
+	mv *.o Build/Lib/Asm
 
-all: $(CXX_BIN)
+$(ASM_BIN): asm_objects $(ASM_MAIN)
+	gcc $(ASM_OBJ) $(ASM_MAIN) -lm -o $(ASM_BIN)
 
-simulate: $(BUILD_BINS)/Main
-	./$<
+# Verilated Model
 
-test: $(BUILD_BINS)/Test
-	./$<
+MODEL_SRC   =  $(wildcard Hardware/*.sv)
+MODEL_INC   =  $(wildcard Hardware/*.svh)
+MODEL_FLAGS =  --cc --build --Mdir Build/Lib/Verilated 
+MODEL_FLAGS += --top-module Top -IHardware -I$(CURDIR)
 
+verilated_model: $(MODEL_SRC) $(MODEL_INC)
+	mkdir -p Build/Lib/Verilated
+	verilator $(MODEL_FLAGS) $(MODEL_SRC)
+
+# Simulations
+
+VERILATOR_LIB  = -I/usr/local/share/verilator/include 
+VERILATOR_LIB += -I/usr/local/share/verilator/include/vltstd
+
+VERILATED =  $(wildcard Build/Lib/Verilated/*.o) 
+VERILATED += $(wildcard Build/Lib/Verilated/*.a)
+VERILATED += -IBuild/Lib/Verilated/
+
+CPP_FLAGS =  -std=c++23 -I. -MMD -DVM_COVERAGE=0 -DVM_SC=0 
+CPP_FLAGS += -DVM_TIMING=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 
+CPP_FLAGS += -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none
+CPP_FLAGS += -pthread -lpthread -latomic -Os 
+
+SIM_SRC = Simulation/Main.cpp
+TB_SRC  = Simulation/Test.cpp
+
+$(SIM_BIN): verilated_model $(MODEL_SRC) $(MODEL_INC) $(ASM_SRC) $(ASM_INC) $(SIM_SRC)
+	g++ $(VERILATED) $(VERILATOR_LIB) $(CPP_FLAGS) $(SIM_SRC) -o $(SIM_BIN)
+
+$(TEST_BIN): verilated_model $(MODEL_SRC) $(MODEL_INC) $(ASM_SRC) $(ASM_INC) $(TB_SRC)
+	g++ $(ASM_OBJ) $(VERILATED) $(VERILATOR_LIB) $(CPP_FLAGS) $(TB_SRC) -o $(TEST_BIN)
+
+# Running
+test: $(TEST_BIN)
+	./$(TEST_BIN)
+
+simulate: $(SIM_BIN)
+	./$(SIM_BIN)
+
+assemble: $(ASM_BIN)
+	./$(ASM_BIN)
 

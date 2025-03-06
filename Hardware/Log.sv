@@ -18,7 +18,7 @@ task log_inner(input string file, input string str);
         "Hardware/Execute.sv"  : begin code = "[35m"; name = "executor";      end
         "Hardware/Decode.sv"   : begin code = "[36m"; name = "decoder";       end
         "Hardware/Register.sv" : begin code = "[91m"; name = "register file"; end
-        default                : begin code = "[0m";  name = "?";             end
+        default                : begin code = "[0m";  name = file;            end
         endcase
 
         colour = {8'h1b, code};

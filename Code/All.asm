@@ -1,12 +1,12 @@
 .globl _start
 _start:
+addi x0, x1, -1
 
 nop
-back_label:
+bck:
 nop
 nop
-jal x2, back_label
-
+jal x2, bck
 
 li x4, 100
 add x1, x2, x3
@@ -15,8 +15,11 @@ lui x0, 111
 auipc x1, 222
 jal x2, label
 jalr x3, x4, 888
+label:
 
-label: 
+
+
+123:
 
 addi x0, x1, 111
 slti x1, x2, 222
