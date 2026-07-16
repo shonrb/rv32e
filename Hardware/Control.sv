@@ -18,7 +18,7 @@ typedef struct {
 module ControlUnit (
     input clock,
     input nreset,
-    bus_master.front bus
+    bus_control.front bus
 );
     logic [31:0] pc;
     logic flush;

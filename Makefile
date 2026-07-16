@@ -10,18 +10,13 @@ all: $(ASM_BIN) $(SIM_BIN) $(TEST_BIN)
 
 # Assembler
 
-ASM_SRC  = $(filter-out Asm/Main.c, $(wildcard Asm/*.c))
-ASM_INC  = $(wildcard Asm/*.h)
-ASM_MAIN = Asm/Main.c
-ASM_OBJ  = $(wildcard Build/Lib/Asm/*.o)
+#ASM_SRC  = $(filter-out Asm/Main.c, $(wildcard Asm/*.c))
+ASM_INC  = Asm/Asm.h
+ASM_MAIN = Asm/Asm.c
 
-asm_objects: $(ASM_SRC) $(ASM_INC)
+$(ASM_BIN): $(ASM_INC) $(ASM_MAIN)
 	mkdir -p Build/Lib/Asm
-	gcc $(ASM_SRC) -lm -g -c 
-	mv *.o Build/Lib/Asm
-
-$(ASM_BIN): asm_objects $(ASM_MAIN)
-	gcc $(ASM_OBJ) $(ASM_MAIN) -lm -o $(ASM_BIN)
+	gcc $(ASM_MAIN) -lm -o $(ASM_BIN)
 
 # Verilated Model
 
@@ -36,8 +31,8 @@ verilated_model: $(MODEL_SRC) $(MODEL_INC)
 
 # Simulations
 
-VERILATOR_LIB  = -I/usr/local/share/verilator/include 
-VERILATOR_LIB += -I/usr/local/share/verilator/include/vltstd
+VERILATOR_LIB  = -I/usr/share/verilator/include 
+VERILATOR_LIB += -I/usr/share/verilator/include/vltstd
 
 VERILATED =  $(wildcard Build/Lib/Verilated/*.o) 
 VERILATED += $(wildcard Build/Lib/Verilated/*.a)
@@ -51,11 +46,11 @@ CPP_FLAGS += -pthread -lpthread -latomic -Os
 SIM_SRC = Simulation/Main.cpp
 TB_SRC  = Simulation/Test.cpp
 
-$(SIM_BIN): verilated_model $(MODEL_SRC) $(MODEL_INC) $(ASM_SRC) $(ASM_INC) $(SIM_SRC)
+$(SIM_BIN): verilated_model $(MODEL_SRC) $(MODEL_INC) $(ASM_INC) $(SIM_SRC)
 	g++ $(VERILATED) $(VERILATOR_LIB) $(CPP_FLAGS) $(SIM_SRC) -o $(SIM_BIN)
 
-$(TEST_BIN): verilated_model $(MODEL_SRC) $(MODEL_INC) $(ASM_SRC) $(ASM_INC) $(TB_SRC)
-	g++ $(ASM_OBJ) $(VERILATED) $(VERILATOR_LIB) $(CPP_FLAGS) $(TB_SRC) -o $(TEST_BIN)
+$(TEST_BIN): verilated_model $(MODEL_SRC) $(MODEL_INC) $(ASM_INC) $(TB_SRC)
+	g++ -g $(VERILATED) $(VERILATOR_LIB) $(CPP_FLAGS) $(TB_SRC) -o $(TEST_BIN)
 
 # Running
 test: $(TEST_BIN)

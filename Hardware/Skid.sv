@@ -30,7 +30,7 @@ module SkidBuffer #(type T, string NAME) (
             down.valid <= 0;
             up.ready <= 1;
         end else begin
-            case (state) 
+            unique case (state) 
             ACTIVE: begin 
                 `LOG(("(%s) Skid buffer is active...", NAME));
                 if (down.ready) begin

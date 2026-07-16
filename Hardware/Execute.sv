@@ -16,7 +16,7 @@ module ExecuteUnit (
     input nreset, 
     skid_buffer_port.upstream decoder,
     reg_access_executor.front register_file,
-    bus_master.front bus,
+    bus_control.front bus,
     executor_port.back control_unit
 );
     decoded inst;

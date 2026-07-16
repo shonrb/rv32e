@@ -5,66 +5,53 @@
 //       than decoder
 // FIXME: JALR requires that funct3 is zero'd
 
-// Global parameters
-parameter AHB_DEVICE_COUNT /* verilator public */ = 2;
-parameter [31:0] AHB_ADDR_MAP[AHB_DEVICE_COUNT-1] /* verilator public */ = '{
-    2048
-};
-
 module Top (
-    input clock,
-    input nreset,
-    output wire                ext_write,
-    output wire [31:0]         ext_addr,
-    output transfer_size       ext_size,
-    output transfer_burst      ext_burst,
-    output transfer_protection ext_prot,
-    output transfer_kind       ext_trans,
-    output logic               ext_mastlock,
-    output logic               ext_ready_mst,
-    output wire [31:0]         ext_wdata,
-    output wire                ext_sel       [AHB_DEVICE_COUNT],
-    input logic [31:0]         ext_rdata     [AHB_DEVICE_COUNT],
-    input logic                ext_ready_slv [AHB_DEVICE_COUNT],
-    input transfer_response    ext_resp      [AHB_DEVICE_COUNT]
+    input i_clock,
+    input i_nreset,
+    output wire                o_ahb_write,
+    output wire [31:0]         o_ahb_addr,
+    output transfer_size       o_ahb_size,
+    output transfer_burst      o_ahb_burst,
+    output transfer_protection o_ahb_prot,
+    output transfer_kind       o_ahb_trans,
+    output logic               o_ahb_mastlock,
+    output logic               o_ahb_ready_mst,
+    output wire [31:0]         o_ahb_wdata,
+    input logic [31:0]         i_ahb_rdata,
+    input logic                i_ahb_ready_slv,
+    input transfer_response    i_ahb_resp
 );
-    logic [AHB_DEVICE_COUNT-1:0] sel;
-    bus_slv_in conn_in();
-    bus_slv_out conn_out[AHB_DEVICE_COUNT]();
-    bus_master master();
+    ahb_lite_out ahb_o();
+    ahb_lite_in ahb_i();
+    bus_control master();
 
     // External bus common signals
-    assign ext_write     = conn_in.write;
-    assign ext_addr      = conn_in.addr; 
-    assign ext_size      = conn_in.size;
-    assign ext_burst     = conn_in.burst;
-    assign ext_prot      = conn_in.prot;
-    assign ext_trans     = conn_in.trans;
-    assign ext_mastlock  = conn_in.mastlock;
-    assign ext_ready_mst = conn_in.ready;
-    assign ext_wdata     = conn_in.wdata;
+    assign o_ahb_write     = ahb_o.write;
+    assign o_ahb_addr      = ahb_o.addr; 
+    assign o_ahb_size      = ahb_o.size;
+    assign o_ahb_burst     = ahb_o.burst;
+    assign o_ahb_prot      = ahb_o.prot;
+    assign o_ahb_trans     = ahb_o.trans;
+    assign o_ahb_mastlock  = ahb_o.mastlock;
+    assign o_ahb_ready_mst = ahb_o.ready;
+    assign o_ahb_wdata     = ahb_o.wdata;
 
-    // External bus per device signals
-    for (genvar i = 0; i < AHB_DEVICE_COUNT; i++) begin
-        assign ext_sel[i]        = sel[i];
-        assign conn_out[i].rdata = ext_rdata[i]; 
-        assign conn_out[i].ready = ext_ready_slv[i]; 
-        assign conn_out[i].resp  = ext_resp[i]; 
-    end
+    assign ahb_i.rdata = i_ahb_rdata;
+    assign ahb_i.ready = i_ahb_ready_slv; 
+    assign ahb_i.resp  = i_ahb_resp; 
 
     ControlUnit cu (
-        .clock(clock),
-        .nreset(nreset),
+        .clock(i_clock),
+        .nreset(i_nreset),
         .bus(master)
     );
 
     BusController bus_control(
-        .clk(clock),
-        .rst(nreset),
+        .clk(i_clock),
+        .rst(i_nreset),
         .bus(master),
-        .sel(sel),
-        .slv_in(conn_in),
-        .slv_out(conn_out)
+        .ahb_o(ahb_o),
+        .ahb_i(ahb_i)
     );
 
     // Allow the simulation to access specific internal signals

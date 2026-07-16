@@ -13,7 +13,7 @@ module FetchUnit (
     input nreset, 
     input [31:0] pc,
     fetcher_port.back control_unit,
-    bus_master.front bus,
+    bus_control.front bus,
     skid_buffer_port.downstream decoder
 );
     enum {
